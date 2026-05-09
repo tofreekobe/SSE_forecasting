@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.pytest_tmp/
+.mypy_cache/
+.ruff_cache/
+
+# Local environments
+.venv*/
+venv/
+env/
+
+# Secrets and local environment files
+.env
+.env.*
+*.token
+*.key
+
+# Raw/private data
+data/
+hf_dataset_package/
+hf_dataset_smoke/
+paper/
+
+# Generated diagnostics, training outputs, and model artifacts
+/diagnostics*/
+/baseline_results/
+/forecast_training*/
+/small_overfit*/
+/logs/
+/checkpoints/
+/runs/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.log
+
+# Generated packages and figures
+*.zip
+fig_*.png
+eda_output.txt
+test_out.txt
+test_gpu.log
+training_output.log
+timesfm.log
+
+# Legacy/prototype root scripts kept locally only
+gui_app.py
+run_eda.py
+simulate_inference.py
+test_crash.py
+train.py
+SSE技术文档.md
+
+# Extracted full-text research material can contain copyrighted text.
+research_notes/local_paper_extracts*
+
+# Local skill/reference copies
+skills/
+skills_ref/

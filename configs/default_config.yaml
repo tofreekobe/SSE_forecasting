@@ -1,0 +1,69 @@
+# ============================================================================
+# DeepSeismic_v3_STCR — 全局配置中心
+# ============================================================================
+
+# ----- 数据路径 -----
+data:
+  local_dir: "./data"                          # 本地数据目录（存放事件 .txt 文件的根目录）
+  oss_dir: "oss://deepseismic-bucket/sse_data" # 阿里云 OSS FUSE 挂载路径
+  n_timesteps: 273                             # 每个事件文件的时间步数 T
+  n_raw_cols: 3040                             # 每行总列数
+  # 列索引定义（Python 切片，左闭右开）
+  year_col: 0                                  # 年份列（舍弃）
+  slip_col_start: 1                            # 滑移向量起始列
+  slip_col_end: 3031                           # 滑移向量结束列（不含）
+  n_slip_cols: 3030                            # 滑移向量维度
+  gnss_col_start: 3031                         # GNSS 起始列
+  gnss_col_end: 3040                           # GNSS 结束列（不含）
+  n_gnss_cols: 9                               # GNSS 维度 (3 台站 × 3 分量)
+  n_events: 6000                               # 事件总数
+  n_stations: 3                                # GNSS 台站数量
+
+# ----- 断层网格拓扑 -----
+grid:
+  n_depth: 15                                  # 深度方向网格数
+  n_width_seg1: 166                            # 段 1 宽度方向网格数
+  n_width_seg2: 36                             # 段 2 宽度方向网格数
+  n_width_total: 202                           # 拼接后总宽度 = 166 + 36
+  seg1_slip_start: 0                           # 段 1 在 slip_vector 中的起始索引
+  seg1_slip_end: 2490                          # 段 1 结束索引（不含） → 15 × 166 = 2490
+  seg2_slip_start: 2490                        # 段 2 起始索引
+  seg2_slip_end: 3030                          # 段 2 结束索引（不含） → 15 × 36 = 540
+
+# ----- 模型超参数（Phase 1 占位） -----
+model:
+  gnss_encoder:
+    input_dim: 9
+    hidden_dim: 32
+    output_grid: [15, 202]
+  conv_gru:
+    input_channels: 2
+    hidden_dim: 64
+    kernel_size: [3, 3]
+    padding: 1
+    num_layers: 3
+  decoder:
+    in_channels: 64
+    out_channels: 1
+  physics_layer:
+    in_features: 3030
+    out_features: 9
+
+# ----- 损失函数权重（Phase 1 占位） -----
+loss:
+  lambda_physics: 1.0                          # λ1: L_Phy_GNSS
+  lambda_laplacian: 0.1                        # λ2: L_Laplacian
+  lambda_operator: 1.0                         # λ3: L_Operator
+  lambda_l1_sparsity: 0.01                     # λ4: L1_Sparsity
+  active_slip_threshold: 1.0e-4                # 活跃滑移阈值
+  active_slip_weight: 10.0                     # 活跃区域 WMSE 权重倍数
+
+# ----- 两阶段训练调度 -----
+training:
+  stage1_epochs: 5                             # Stage 1: 物理层预热
+  stage2_epochs: 45                            # Stage 2: 端到端联合训练
+  total_epochs: 50
+  batch_size: 8
+  learning_rate: 1.0e-3
+  scheduled_sampling_start_epoch: 15           # Scheduled Sampling 开启 Epoch
+  scheduled_sampling_decay: 0.98               # 衰减率
