@@ -86,7 +86,7 @@ Cost note: public SSH requires NAT Gateway + EIP. These may keep billing even wh
 
 ## Current DSW SSH Notes
 
-Current intended access mode: public SSH direct connection.
+Current intended access mode: VPC internal SSH.
 
 Known instance details:
 
@@ -101,13 +101,14 @@ Known instance details:
 - SSH listen port inside DSW: `22`
 - Configured SSH public key begins with: `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... administrator@Server-for-Xifan`
 
-Important status from the screenshot:
+Important status:
 
 - The DSW instance can access the internet through a public gateway.
-- The SSH custom service currently shows public access as `-`.
-- Therefore the instance-side SSH listener is configured, but the public inbound SSH address/port is not visible yet.
+- The SSH custom service has listen port `22`.
+- The public SSH entry is not required if an ECS/VPN/client inside the same VPC will connect to DSW.
+- The image URL is a container image registry URL, not an SSH host.
 
-Before local SSH can work, the DSW custom service must show a public access endpoint. In the DSW instance page, use `访问配置 -> 自定义服务 -> 修改配置` and enable public access for the `SSH` service. After NAT Gateway and EIP are configured, copy the generated public access host/IP and public port.
+Before VPC internal SSH can work, the connection must originate from a machine inside the same VPC, such as an ECS instance, a VPN-connected local machine, or another approved VPC client. A normal local Windows machine on the public internet cannot directly resolve or reach the DSW VPC-only endpoint.
 
 Do not confuse these ports:
 
@@ -116,16 +117,19 @@ Do not confuse these ports:
 
 Pending information:
 
-- Public SSH host or EIP.
-- Public SSH port.
+- VPC SSH host/domain from the DSW instance details, for example `dsw-notebook-xxxx...`.
+- Confirmation that the client we will use is inside the same VPC:
+  - ECS jump host public SSH info; or
+  - VPN/CEN/local route into the VPC; or
+  - confirmation that commands will be run from another terminal already inside the VPC.
 - Local private key path that matches the configured public key, or add a new public key generated on this machine.
 
 Recommended data transfer for this instance:
 
-1. Use `scp` from this local machine after SSH works.
+1. If an ECS jump host or VPN route exists, use `scp` through the VPC path.
 2. Upload the small code bundle first.
 3. Upload `hf_dataset_package` second, preferably as a tar archive or with recursive `scp`.
-4. Use Hugging Face download only as fallback, because private HF access from a China-region DSW instance may be slower or less reliable and requires passing a token to DSW.
+4. If no VPC route from the local machine exists, download the private HF dataset from inside DSW as the fallback. This is operationally simpler than setting up a public inbound SSH endpoint, but may be slower from a China-region instance and requires setting a fresh HF token inside DSW.
 
 ## Recommended DSW Instance
 
@@ -222,11 +226,18 @@ bash scripts/pai_dsw_run.sh
 
 ## Local Upload Commands
 
-If the project has not been uploaded to DSW yet and SSH works:
+If the project has not been uploaded to DSW yet and public SSH works:
 
 ```powershell
 scp -i C:\Users\Administrator\.ssh\pai_dsw_rsa -P <PUBLIC_SSH_PORT> pai_sse_code_bundle.zip root@<PUBLIC_EIP_OR_HOST>:/mnt/data/
 ssh -i C:\Users\Administrator\.ssh\pai_dsw_rsa root@<PUBLIC_EIP_OR_HOST> -p <PUBLIC_SSH_PORT> "cd /mnt/data && unzip -o pai_sse_code_bundle.zip -d sse"
+```
+
+If using VPC internal SSH through an ECS jump host:
+
+```powershell
+scp -i C:\Users\Administrator\.ssh\pai_dsw_rsa -o ProxyJump=root@<ECS_PUBLIC_IP>:22 pai_sse_code_bundle.zip root@<DSW_INTERNAL_DOMAIN>:/mnt/data/
+ssh -i C:\Users\Administrator\.ssh\pai_dsw_rsa -J root@<ECS_PUBLIC_IP>:22 root@<DSW_INTERNAL_DOMAIN> "cd /mnt/data && unzip -o pai_sse_code_bundle.zip -d sse"
 ```
 
 If the dataset package is not mounted on DSW and must be uploaded from this machine, expect a large transfer:
@@ -234,6 +245,23 @@ If the dataset package is not mounted on DSW and must be uploaded from this mach
 ```powershell
 scp -i C:\Users\Administrator\.ssh\pai_dsw_rsa -P <PUBLIC_SSH_PORT> -r hf_dataset_package root@<PUBLIC_EIP_OR_HOST>:/mnt/data/
 ```
+
+With an ECS jump host:
+
+```powershell
+scp -i C:\Users\Administrator\.ssh\pai_dsw_rsa -o ProxyJump=root@<ECS_PUBLIC_IP>:22 -r hf_dataset_package root@<DSW_INTERNAL_DOMAIN>:/mnt/data/
+```
+
+If using Hugging Face download from inside DSW instead of `scp`:
+
+```bash
+cd /mnt/data
+python -m pip install -U huggingface_hub
+export HF_TOKEN=<fresh_private_dataset_token>
+hf download tofreekobe/sse-slow-slip-private --repo-type dataset --local-dir /mnt/data/hf_dataset_package
+```
+
+Do not commit or write the HF token into project files.
 
 ## DLC Console Setup
 
