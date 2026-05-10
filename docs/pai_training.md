@@ -2,9 +2,10 @@
 
 ## Decision
 
-Use PAI-DSW first, then PAI-DLC.
+Use local IDE + SSH to PAI-DSW first, then PAI-DLC if long-running jobs need to be detached.
 
-- DSW is the interactive GPU development machine: use it to verify CUDA, package paths, small overfit, and one short training run.
+- DSW is the interactive GPU development machine: use SSH from the local terminal/IDE to verify CUDA, package paths, small overfit, and one short training run.
+- Do not switch to the browser IDE unless SSH cannot be enabled.
 - DLC is the managed training job runner: use it after the exact DSW command works, so random and blocked split runs can continue without keeping an IDE session alive.
 - EAS is not needed now. It is for serving a trained model, not for research iteration.
 
@@ -15,6 +16,73 @@ Official references used:
 - DLC quickstart: https://help.aliyun.com/zh/pai/getting-started/distributed-training-dlc-quickstart
 - DLC submit command: https://help.aliyun.com/zh/pai/developer-reference/commands-used-to-submit-jobs
 - PAI SDK Estimator: https://help.aliyun.com/zh/pai/developer-reference/submit-a-training-job
+- DSW SSH direct connection: `C:\Users\Administrator\Desktop\王一帆项目文件\mm\阿里云PAI的SSH.md`
+
+## SSH-First Access Plan
+
+Use SSH direct connection from the local machine to the DSW instance.
+
+Preferred flow:
+
+1. Enable SSH on the DSW instance.
+2. Add the local public key to the DSW SSH public key field.
+3. Enable public access if connecting from this local Windows machine outside the VPC.
+4. Connect from local PowerShell with `ssh`.
+5. Upload or clone the code into the mounted DSW workspace.
+6. Run `pai_check_env.py`, small overfit, then random/blocked training from SSH.
+
+Public SSH form:
+
+```powershell
+ssh -i C:\Users\Administrator\.ssh\pai_dsw_rsa root@<PUBLIC_EIP_OR_HOST> -p <PUBLIC_SSH_PORT>
+```
+
+VPC-only SSH form, usable only from an ECS/VPN/client already inside the same VPC:
+
+```bash
+ssh -i ~/.ssh/pai_dsw_rsa root@<DSW_INTERNAL_DOMAIN> -p 22
+```
+
+If the key is stored in the default path and has no passphrase, `-i` can be omitted.
+
+## Information Needed From The User
+
+Please provide or confirm these items before I can connect and run training through SSH:
+
+1. SSH access mode:
+   - `public`: local Windows machine connects through EIP/NAT;
+   - `vpc`: connection is made from an ECS/VPN host inside the same VPC.
+2. SSH host:
+   - public mode: EIP or public access host shown in DSW instance details;
+   - VPC mode: internal DSW domain such as `dsw-notebook-xxxx...`.
+3. SSH port:
+   - public mode: the DSW public access port, often not `22`, for example `1024`;
+   - VPC mode: usually `22`.
+4. Login user:
+   - usually `root` for DSW SSH.
+5. SSH key choice:
+   - either let me generate `C:\Users\Administrator\.ssh\pai_dsw_rsa` and you paste `pai_dsw_rsa.pub` into DSW;
+   - or provide the local private key path that already matches the public key configured in DSW.
+6. DSW instance/network confirmation:
+   - SSH is enabled;
+   - listen port is `22`;
+   - public access is enabled if using public mode;
+   - NAT Gateway and EIP are configured for public mode;
+   - security group inbound allows TCP 22 for the instance side.
+7. Remote storage paths:
+   - code path, default `/mnt/data/sse`;
+   - dataset package path, default `/mnt/data/hf_dataset_package`;
+   - output path, default `/mnt/data/sse_outputs`.
+8. Data transfer choice:
+   - data already mounted/uploaded on DSW;
+   - or I should upload `hf_dataset_package` from this machine through `scp`;
+   - or DSW should download it from the private HF dataset repo.
+9. Remote Python environment:
+   - DSW image name if known;
+   - Python command if not default `python`;
+   - whether CUDA PyTorch is already installed.
+
+Cost note: public SSH requires NAT Gateway + EIP. These may keep billing even when DSW is stopped, so delete or release them when SSH access is no longer needed.
 
 ## Recommended DSW Instance
 
@@ -48,9 +116,9 @@ dataset_metadata.json
 
 Preferred data path is OSS or CPFS mounted into DSW/DLC. If using Hugging Face download instead, do not hard-code tokens in scripts; set a fresh token in the DSW terminal environment.
 
-## DSW Commands
+## DSW Commands Over SSH
 
-After uploading/unzipping the code into `/mnt/data/sse`:
+After SSH login and after uploading/unzipping the code into `/mnt/data/sse`:
 
 ```bash
 cd /mnt/data/sse
@@ -107,6 +175,21 @@ The shortcut script is:
 
 ```bash
 bash scripts/pai_dsw_run.sh
+```
+
+## Local Upload Commands
+
+If the project has not been uploaded to DSW yet and SSH works:
+
+```powershell
+scp -i C:\Users\Administrator\.ssh\pai_dsw_rsa -P <PUBLIC_SSH_PORT> pai_sse_code_bundle.zip root@<PUBLIC_EIP_OR_HOST>:/mnt/data/
+ssh -i C:\Users\Administrator\.ssh\pai_dsw_rsa root@<PUBLIC_EIP_OR_HOST> -p <PUBLIC_SSH_PORT> "cd /mnt/data && unzip -o pai_sse_code_bundle.zip -d sse"
+```
+
+If the dataset package is not mounted on DSW and must be uploaded from this machine, expect a large transfer:
+
+```powershell
+scp -i C:\Users\Administrator\.ssh\pai_dsw_rsa -P <PUBLIC_SSH_PORT> -r hf_dataset_package root@<PUBLIC_EIP_OR_HOST>:/mnt/data/
 ```
 
 ## DLC Console Setup
