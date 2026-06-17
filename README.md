@@ -55,7 +55,7 @@ python scripts\run_small_overfit.py `
   --max-events 16 `
   --forecast-start 60 `
   --forecast-horizon 50 `
-  --model-type segmented `
+  --model-type segmented_residual `
   --device auto
 ```
 
@@ -68,7 +68,7 @@ python scripts\train_forecast_model.py `
   --protocol random `
   --forecast-start 60 `
   --forecast-horizon 50 `
-  --model-type segmented
+  --model-type segmented_residual
 ```
 
 ## PAI

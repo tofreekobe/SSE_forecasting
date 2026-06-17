@@ -19,7 +19,7 @@ from src.models.forecast_baselines import (
     evaluate_package_physical_baselines,
     evaluate_physical_baselines,
 )
-from src.models.small_forecast_net import SegmentedSlipConvForecastNet, SlipConvForecastNet
+from src.models.small_forecast_net import SegmentedResidualForecastNet, SegmentedSlipConvForecastNet, SlipConvForecastNet
 
 
 def _write_event(path: Path, event_id: int, amplitude: float) -> None:
@@ -149,6 +149,17 @@ def test_segmented_small_forecast_net_forward_shape():
     model = SegmentedSlipConvForecastNet(history_steps=10, forecast_horizon=5, hidden_channels=8)
     history_slip = np.random.default_rng(3).random((2, 10, 3030), dtype=np.float32)
     history_gnss = np.random.default_rng(4).random((2, 10, 9), dtype=np.float32)
+
+    pred = model(torch.from_numpy(history_slip), torch.from_numpy(history_gnss))
+
+    assert pred.shape == (2, 5, 3030)
+    assert float(pred.detach().min()) >= 0.0
+
+
+def test_segmented_residual_forecast_net_forward_shape():
+    model = SegmentedResidualForecastNet(history_steps=10, forecast_horizon=5, hidden_channels=8)
+    history_slip = np.random.default_rng(5).random((2, 10, 3030), dtype=np.float32)
+    history_gnss = np.random.default_rng(6).random((2, 10, 9), dtype=np.float32)
 
     pred = model(torch.from_numpy(history_slip), torch.from_numpy(history_gnss))
 

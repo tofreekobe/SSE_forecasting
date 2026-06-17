@@ -75,6 +75,55 @@ def _make_conv_stack(
     return nn.Sequential(*layers)
 
 
+def _group_count(channels: int, max_groups: int = 8) -> int:
+    for groups in range(min(max_groups, channels), 0, -1):
+        if channels % groups == 0:
+            return groups
+    return 1
+
+
+class ResidualConvBlock(nn.Module):
+    """Small residual block for stable segment-wise slip forecasting."""
+
+    def __init__(self, channels: int) -> None:
+        super().__init__()
+        groups = _group_count(channels)
+        self.net = nn.Sequential(
+            nn.Conv2d(channels, channels, kernel_size=3, padding=1),
+            nn.GroupNorm(groups, channels),
+            nn.GELU(),
+            nn.Conv2d(channels, channels, kernel_size=3, padding=1),
+            nn.GroupNorm(groups, channels),
+        )
+        self.activation = nn.GELU()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.activation(x + self.net(x))
+
+
+def _make_residual_conv_stack(
+    in_channels: int,
+    hidden_channels: int,
+    forecast_horizon: int,
+    num_blocks: int,
+) -> nn.Sequential:
+    groups = _group_count(hidden_channels)
+    layers: list[nn.Module] = [
+        nn.Conv2d(in_channels, hidden_channels, kernel_size=3, padding=1),
+        nn.GroupNorm(groups, hidden_channels),
+        nn.GELU(),
+    ]
+    layers.extend(ResidualConvBlock(hidden_channels) for _ in range(num_blocks))
+    layers.extend(
+        [
+            nn.Conv2d(hidden_channels, hidden_channels, kernel_size=1),
+            nn.GELU(),
+            nn.Conv2d(hidden_channels, forecast_horizon, kernel_size=1),
+        ]
+    )
+    return nn.Sequential(*layers)
+
+
 class SlipConvForecastNet(nn.Module):
     """A compact model used to verify the future-slip training loop."""
 
@@ -147,6 +196,51 @@ class SegmentedSlipConvForecastNet(nn.Module):
         seg1, seg2 = slip_vector_to_segments_torch(history_slip)
         seg1_input = torch.cat([seg1, self._expand_gnss(history_gnss, GRID_WIDTH_SEG1)], dim=1)
         seg2_input = torch.cat([seg2, self._expand_gnss(history_gnss, GRID_WIDTH_SEG2)], dim=1)
+
+        seg1_delta = self.seg1_net(seg1_input)
+        seg2_delta = self.seg2_net(seg2_input)
+        seg1_pred = F.relu(seg1[:, -1:].expand(-1, self.forecast_horizon, -1, -1) + seg1_delta)
+        seg2_pred = F.relu(seg2[:, -1:].expand(-1, self.forecast_horizon, -1, -1) + seg2_delta)
+        return slip_segments_to_vector_torch(seg1_pred, seg2_pred)
+
+
+class SegmentedResidualForecastNet(nn.Module):
+    """Segment-aware residual model used as the default full-training baseline."""
+
+    def __init__(
+        self,
+        history_steps: int,
+        forecast_horizon: int,
+        n_gnss: int = 9,
+        gnss_channels: int = 16,
+        hidden_channels: int = 64,
+        num_blocks: int = 3,
+    ) -> None:
+        super().__init__()
+        self.history_steps = int(history_steps)
+        self.forecast_horizon = int(forecast_horizon)
+        self.gnss_encoder = nn.Sequential(
+            nn.Flatten(),
+            nn.LayerNorm(self.history_steps * n_gnss),
+            nn.Linear(self.history_steps * n_gnss, 128),
+            nn.GELU(),
+            nn.Linear(128, gnss_channels),
+            nn.GELU(),
+        )
+
+        in_channels = self.history_steps + gnss_channels
+        self.seg1_net = _make_residual_conv_stack(in_channels, hidden_channels, self.forecast_horizon, num_blocks)
+        self.seg2_net = _make_residual_conv_stack(in_channels, hidden_channels, self.forecast_horizon, num_blocks)
+
+    @staticmethod
+    def _expand_gnss_features(gnss_features: torch.Tensor, width: int) -> torch.Tensor:
+        return gnss_features[:, :, None, None].expand(-1, -1, GRID_DEPTH, width)
+
+    def forward(self, history_slip: torch.Tensor, history_gnss: torch.Tensor) -> torch.Tensor:
+        seg1, seg2 = slip_vector_to_segments_torch(history_slip)
+        gnss_features = self.gnss_encoder(history_gnss)
+        seg1_input = torch.cat([seg1, self._expand_gnss_features(gnss_features, GRID_WIDTH_SEG1)], dim=1)
+        seg2_input = torch.cat([seg2, self._expand_gnss_features(gnss_features, GRID_WIDTH_SEG2)], dim=1)
 
         seg1_delta = self.seg1_net(seg1_input)
         seg2_delta = self.seg2_net(seg2_input)

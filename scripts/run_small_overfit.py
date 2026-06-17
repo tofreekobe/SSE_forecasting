@@ -33,7 +33,7 @@ from src.models.forecast_baselines import (
     evaluate_package_physical_baselines,
     write_metrics,
 )
-from src.models.small_forecast_net import SegmentedSlipConvForecastNet, SlipConvForecastNet
+from src.models.small_forecast_net import SegmentedResidualForecastNet, SegmentedSlipConvForecastNet, SlipConvForecastNet
 
 
 def weighted_mse(pred: torch.Tensor, target: torch.Tensor, active_weight: float) -> torch.Tensor:
@@ -108,7 +108,12 @@ def write_history(output_dir: Path, rows: list[dict[str, float]]) -> None:
 
 
 def build_model(args: argparse.Namespace) -> torch.nn.Module:
-    model_cls = SegmentedSlipConvForecastNet if args.model_type == "segmented" else SlipConvForecastNet
+    model_classes = {
+        "segmented_residual": SegmentedResidualForecastNet,
+        "segmented": SegmentedSlipConvForecastNet,
+        "plain": SlipConvForecastNet,
+    }
+    model_cls = model_classes[args.model_type]
     return model_cls(
         history_steps=args.forecast_start,
         forecast_horizon=args.forecast_horizon,
@@ -138,7 +143,7 @@ def main() -> int:
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--hidden-channels", type=int, default=64)
-    parser.add_argument("--model-type", choices=["segmented", "plain"], default="segmented")
+    parser.add_argument("--model-type", choices=["segmented_residual", "segmented", "plain"], default="segmented_residual")
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--active-weight", type=float, default=1.0)
     parser.add_argument("--log-every", type=int, default=10)

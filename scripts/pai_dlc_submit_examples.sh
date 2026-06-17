@@ -17,7 +17,7 @@ dlc submit pytorchjob \
   --worker_spec="${WORKER_SPEC}" \
   --worker_image="${IMAGE_URI}" \
   --data_sources="${DATA_SOURCE_ID}" \
-  --command="cd /mnt/data/sse && python -m pip install -r requirements-pai.txt && python scripts/pai_check_env.py --package-dir /mnt/data/hf_dataset_package && python scripts/train_forecast_model.py --package-dir /mnt/data/hf_dataset_package --output-dir /mnt/data/sse_outputs/forecast_training_results --protocol random --forecast-start 60 --forecast-horizon 50 --epochs 50 --batch-size 16 --num-workers 4 --hidden-channels 64 --model-type segmented --device cuda --lr 0.001 --active-weight 1.0 --m0-loss-weight 0.01 --amp --tensorboard-dir /mnt/data/sse_outputs/tensorboard/random --log-every 1"
+  --command="cd /mnt/data/sse && python -m pip install -r requirements-pai.txt && python scripts/pai_check_env.py --package-dir /mnt/data/hf_dataset_package && python scripts/train_forecast_model.py --package-dir /mnt/data/hf_dataset_package --output-dir /mnt/data/sse_outputs/forecast_training_results --protocol random --forecast-start 60 --forecast-horizon 50 --epochs 50 --batch-size 16 --num-workers 4 --hidden-channels 64 --model-type segmented_residual --device cuda --lr 0.001 --active-weight 1.0 --m0-loss-weight 0.01 --amp --tensorboard-dir /mnt/data/sse_outputs/tensorboard/random --log-every 1"
 
 dlc submit pytorchjob \
   --name=sse-blocked-h50 \
@@ -26,4 +26,4 @@ dlc submit pytorchjob \
   --worker_spec="${WORKER_SPEC}" \
   --worker_image="${IMAGE_URI}" \
   --data_sources="${DATA_SOURCE_ID}" \
-  --command="cd /mnt/data/sse && python -m pip install -r requirements-pai.txt && python scripts/pai_check_env.py --package-dir /mnt/data/hf_dataset_package && python scripts/train_forecast_model.py --package-dir /mnt/data/hf_dataset_package --output-dir /mnt/data/sse_outputs/forecast_training_results --protocol blocked --forecast-start 60 --forecast-horizon 50 --epochs 50 --batch-size 16 --num-workers 4 --hidden-channels 64 --model-type segmented --device cuda --lr 0.001 --active-weight 1.0 --m0-loss-weight 0.01 --amp --tensorboard-dir /mnt/data/sse_outputs/tensorboard/blocked --log-every 1"
+  --command="cd /mnt/data/sse && python -m pip install -r requirements-pai.txt && python scripts/pai_check_env.py --package-dir /mnt/data/hf_dataset_package && python scripts/train_forecast_model.py --package-dir /mnt/data/hf_dataset_package --output-dir /mnt/data/sse_outputs/forecast_training_results --protocol blocked --forecast-start 60 --forecast-horizon 50 --epochs 50 --batch-size 16 --num-workers 4 --hidden-channels 64 --model-type segmented_residual --device cuda --lr 0.001 --active-weight 1.0 --m0-loss-weight 0.01 --amp --tensorboard-dir /mnt/data/sse_outputs/tensorboard/blocked --log-every 1"

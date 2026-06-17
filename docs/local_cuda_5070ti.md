@@ -63,7 +63,7 @@ cuda ok
   --epochs 3 `
   --batch-size 2 `
   --hidden-channels 8 `
-  --model-type segmented `
+  --model-type segmented_residual `
   --device cuda `
   --lr 0.001 `
   --log-every 1
@@ -83,7 +83,7 @@ Use the local GPU for fast iteration, not final publication runs:
   --epochs 180 `
   --batch-size 8 `
   --hidden-channels 64 `
-  --model-type segmented `
+  --model-type segmented_residual `
   --device cuda `
   --lr 0.001 `
   --log-every 10

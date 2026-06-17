@@ -33,7 +33,7 @@ from src.models.forecast_baselines import (
     evaluate_package_physical_baselines,
     write_metrics,
 )
-from src.models.small_forecast_net import SegmentedSlipConvForecastNet, SlipConvForecastNet
+from src.models.small_forecast_net import SegmentedResidualForecastNet, SegmentedSlipConvForecastNet, SlipConvForecastNet
 
 
 def _limit(ids: list[int], max_items: int | None) -> list[int]:
@@ -122,8 +122,17 @@ def maybe_make_writer(output_dir: Path, tensorboard_dir: str | None):
     return SummaryWriter(str(log_dir))
 
 
+def rmse_improvement(model_rmse: float, baseline_rmse: float) -> float:
+    return 100.0 * (baseline_rmse - model_rmse) / max(baseline_rmse, 1e-12)
+
+
 def build_model(args: argparse.Namespace) -> torch.nn.Module:
-    model_cls = SegmentedSlipConvForecastNet if args.model_type == "segmented" else SlipConvForecastNet
+    model_classes = {
+        "segmented_residual": SegmentedResidualForecastNet,
+        "segmented": SegmentedSlipConvForecastNet,
+        "plain": SlipConvForecastNet,
+    }
+    model_cls = model_classes[args.model_type]
     return model_cls(
         history_steps=args.forecast_start,
         forecast_horizon=args.forecast_horizon,
@@ -144,7 +153,9 @@ def choose_device(device_arg: str) -> torch.device:
 def write_report(output_dir: Path, payload: dict[str, object]) -> None:
     protocol = payload["protocol"]
     final_val = payload["final_val"]
+    final_test = payload.get("final_test")
     baseline_val = payload["baseline_val_h50"]
+    baseline_test = payload.get("baseline_test_h50")
     status = payload["status"]
     lines = [
         f"# Forecast Training Report ({protocol})",
@@ -167,7 +178,24 @@ def write_report(output_dir: Path, payload: dict[str, object]) -> None:
         f"- Model h50 M0 rel abs: {final_val['m0_rel_abs']:.6g}",
         f"- Persistence h50 RMSE: {baseline_val['rmse_persistence']:.6g}",
         f"- Mean h50 RMSE: {baseline_val['rmse_mean']:.6g}",
+        f"- RMSE improvement vs persistence: {payload['val_rmse_improvement_pct']:.3g}%",
     ]
+    if final_test and baseline_test:
+        lines.extend(
+            [
+                "",
+                "## Final Test",
+                "",
+                f"- Model h50 RMSE: {final_test['physical_rmse']:.6g}",
+                f"- Model h50 R2: {final_test['physical_r2']:.6g}",
+                f"- Model h50 M0 rel abs: {final_test['m0_rel_abs']:.6g}",
+                f"- Persistence h50 RMSE: {baseline_test['rmse_persistence']:.6g}",
+                f"- Mean h50 RMSE: {baseline_test['rmse_mean']:.6g}",
+                f"- RMSE improvement vs persistence: {payload['test_rmse_improvement_pct']:.3g}%",
+                f"- M0 change vs persistence: {payload['test_m0_change_pct']:.3g}%",
+                f"- Publication gate: `{payload['publication_gate']}`",
+            ]
+        )
     (output_dir / "forecast_training_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -187,7 +215,7 @@ def main() -> int:
     parser.add_argument("--num-workers", type=int, default=2)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--hidden-channels", type=int, default=64)
-    parser.add_argument("--model-type", choices=["segmented", "plain"], default="segmented")
+    parser.add_argument("--model-type", choices=["segmented_residual", "segmented", "plain"], default="segmented_residual")
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--active-weight", type=float, default=1.0)
     parser.add_argument("--m0-loss-weight", type=float, default=0.0)
@@ -380,9 +408,26 @@ def main() -> int:
 
     h = str(args.forecast_horizon)
     status = "PASS_BASELINE" if final_val["physical_rmse"] < val_baselines[h]["rmse_persistence"] else "BELOW_BASELINE"
+    val_rmse_gain = rmse_improvement(final_val["physical_rmse"], val_baselines[h]["rmse_persistence"])
+    test_rmse_gain = None
+    test_m0_change = None
+    publication_gate = "NOT_EVALUATED"
+    if final_test is not None and h in test_baselines:
+        test_baseline_h = test_baselines[h]
+        test_rmse_gain = rmse_improvement(final_test["physical_rmse"], test_baseline_h["rmse_persistence"])
+        test_m0_change = 100.0 * (
+            final_test["m0_rel_abs"] - test_baseline_h["m0_rel_abs_persistence"]
+        ) / max(test_baseline_h["m0_rel_abs_persistence"], 1e-12)
+        required_gain = 5.0 if args.protocol == "random" else 2.0
+        publication_gate = (
+            "PASS"
+            if test_rmse_gain >= required_gain and test_m0_change <= 10.0
+            else "FAIL"
+        )
     payload: dict[str, object] = {
         "protocol": args.protocol,
         "status": status,
+        "publication_gate": publication_gate,
         "train_event_count": len(train_ids),
         "val_event_count": len(val_ids),
         "test_event_count": len(test_ids),
@@ -394,6 +439,9 @@ def main() -> int:
         "final_test": final_test,
         "baseline_val_h50": val_baselines[h],
         "baseline_test_h50": test_baselines.get(h),
+        "val_rmse_improvement_pct": val_rmse_gain,
+        "test_rmse_improvement_pct": test_rmse_gain,
+        "test_m0_change_pct": test_m0_change,
     }
     (output_dir / "metrics.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     write_history(output_dir / "training_history.csv", history)

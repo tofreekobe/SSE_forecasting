@@ -19,7 +19,7 @@ python scripts/run_small_overfit.py \
   --epochs 180 \
   --batch-size 8 \
   --hidden-channels 64 \
-  --model-type segmented \
+  --model-type segmented_residual \
   --device cuda \
   --lr 0.001 \
   --log-every 10
@@ -34,7 +34,7 @@ python scripts/train_forecast_model.py \
   --batch-size 16 \
   --num-workers 4 \
   --hidden-channels 64 \
-  --model-type segmented \
+  --model-type segmented_residual \
   --device cuda \
   --lr 0.001 \
   --active-weight 1.0 \
@@ -53,7 +53,7 @@ python scripts/train_forecast_model.py \
   --batch-size 16 \
   --num-workers 4 \
   --hidden-channels 64 \
-  --model-type segmented \
+  --model-type segmented_residual \
   --device cuda \
   --lr 0.001 \
   --active-weight 1.0 \
