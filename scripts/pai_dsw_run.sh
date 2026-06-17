@@ -61,3 +61,8 @@ python scripts/train_forecast_model.py \
   --amp \
   --tensorboard-dir "${OUTPUT_DIR}/tensorboard/blocked" \
   --log-every 1
+
+python scripts/summarize_training_results.py \
+  --small-overfit-dir "${OUTPUT_DIR}/small_overfit" \
+  --training-dir "${OUTPUT_DIR}/forecast_training_results" \
+  --output "${OUTPUT_DIR}/training_summary.md"
