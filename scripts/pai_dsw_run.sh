@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_DIR="${PROJECT_DIR:-/mnt/data/sse}"
-PACKAGE_DIR="${PACKAGE_DIR:-/mnt/data/hf_dataset_package}"
-OUTPUT_DIR="${OUTPUT_DIR:-/mnt/data/sse_outputs}"
+if [ -d /mnt/data ]; then
+  DEFAULT_PAI_ROOT="/mnt/data"
+else
+  DEFAULT_PAI_ROOT="/mnt/workspace"
+fi
+
+PAI_ROOT="${PAI_ROOT:-${DEFAULT_PAI_ROOT}}"
+PROJECT_DIR="${PROJECT_DIR:-${PAI_ROOT}/sse}"
+PACKAGE_DIR="${PACKAGE_DIR:-${PAI_ROOT}/hf_dataset_package}"
+OUTPUT_DIR="${OUTPUT_DIR:-${PAI_ROOT}/sse_outputs}"
 
 cd "${PROJECT_DIR}"
 

@@ -168,23 +168,23 @@ Preferred data path is OSS or CPFS mounted into DSW/DLC. If using Hugging Face d
 Use this when the DSW instance is running but public SSH is unavailable, or when VPC SSH shows only an internal IP such as `10.0.0.147:22`.
 
 1. Open the DSW instance Web IDE from the PAI console.
-2. Upload `pai_sse_code_bundle.zip` to `/mnt/data`.
+2. Upload `pai_sse_code_bundle.zip` to the DSW file station. In this instance it appears under `/mnt/workspace/TEMP-FILE-STATION`.
 3. In the DSW terminal, run:
 
 ```bash
-cd /mnt/data
-rm -rf /mnt/data/sse
-unzip -o pai_sse_code_bundle.zip -d /mnt/data/sse
-cd /mnt/data/sse
+cd /mnt/workspace
+rm -rf /mnt/workspace/sse
+unzip -o /mnt/workspace/TEMP-FILE-STATION/pai_sse_code_bundle.zip -d /mnt/workspace/sse
+cd /mnt/workspace/sse
 python -m pip install -r requirements-pai.txt
 export HF_TOKEN="<fresh private HF dataset read token>"
 python scripts/pai_prepare_hf_dataset.py \
   --repo-id tofreekobe/sse-slow-slip-private \
-  --package-dir /mnt/data/hf_dataset_package
+  --package-dir /mnt/workspace/hf_dataset_package
 bash scripts/pai_dsw_run.sh
 ```
 
-If the HF download is slow or blocked from the China-region instance, upload or mount `hf_dataset_package` directly at `/mnt/data/hf_dataset_package`, then skip `pai_prepare_hf_dataset.py`.
+If your DSW instance exposes `/mnt/data`, that path is also supported by `scripts/pai_dsw_run.sh`. If the HF download is slow or blocked from the China-region instance, upload or mount `hf_dataset_package` directly at `/mnt/workspace/hf_dataset_package`, then skip `pai_prepare_hf_dataset.py`.
 
 ## DSW Commands Over SSH
 
