@@ -200,6 +200,10 @@ def main() -> int:
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-5)
 
     history: list[dict[str, float]] = []
+    best_rmse = float("inf")
+    best_metrics: dict[str, float] | None = None
+    best_state = None
+    best_epoch = 0
     for epoch in range(1, args.epochs + 1):
         model.train()
         total_loss = 0.0
@@ -227,6 +231,11 @@ def main() -> int:
                 **metrics,
             }
             history.append(row)
+            if metrics["physical_rmse"] < best_rmse:
+                best_rmse = metrics["physical_rmse"]
+                best_metrics = dict(metrics)
+                best_state = {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
+                best_epoch = epoch
             print(
                 f"epoch={epoch:04d} loss={row['train_loss']:.6g} "
                 f"rmse={row['physical_rmse']:.6g} r2={row['physical_r2']:.6g} "
@@ -234,10 +243,13 @@ def main() -> int:
                 flush=True,
             )
 
-    final_metrics = evaluate_model(model, eval_loader, slip_transform, device)
+    if best_state is not None:
+        model.load_state_dict(best_state)
+    final_metrics = best_metrics if best_metrics is not None else evaluate_model(model, eval_loader, slip_transform, device)
     h50 = baseline_metrics[str(args.forecast_horizon)]
     final_metrics.update(
         {
+            "best_epoch": float(best_epoch),
             "event_count": float(len(event_ids)),
             "forecast_start": float(args.forecast_start),
             "forecast_horizon": float(args.forecast_horizon),

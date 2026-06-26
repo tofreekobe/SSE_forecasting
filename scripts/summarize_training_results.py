@@ -28,6 +28,15 @@ def _fmt(value: Any, digits: int = 4) -> str:
         return str(value)
 
 
+def _fmt_int(value: Any) -> str:
+    if value is None:
+        return "n/a"
+    try:
+        return str(int(round(float(value))))
+    except Exception:
+        return str(value)
+
+
 def _line_for_split(name: str, metrics: dict[str, Any]) -> list[str]:
     final = metrics.get("final_test") or metrics.get("final_val") or {}
     baseline = metrics.get("baseline_test_h50") or metrics.get("baseline_val_h50") or {}
@@ -67,7 +76,7 @@ def main() -> int:
                 "",
                 f"- Success: `{_fmt(small.get('success'))}`",
                 f"- Model type: `{small.get('model_type', 'n/a')}`",
-                f"- Event count: `{_fmt(small.get('event_count'), 0)}`",
+                f"- Event count: `{_fmt_int(small.get('event_count'))}`",
                 f"- Model h50 RMSE: `{_fmt(small.get('physical_rmse'))}`",
                 f"- Persistence h50 RMSE: `{_fmt(small.get('baseline_h50_persistence_rmse'))}`",
                 f"- RMSE / persistence: `{_fmt(small.get('rmse_vs_persistence_ratio'))}`",

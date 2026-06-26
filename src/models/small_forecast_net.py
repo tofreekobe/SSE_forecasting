@@ -71,7 +71,10 @@ def _make_conv_stack(
                 nn.GELU(),
             ]
         )
-    layers.append(nn.Conv2d(hidden_channels, forecast_horizon, kernel_size=1))
+    out = nn.Conv2d(hidden_channels, forecast_horizon, kernel_size=1)
+    nn.init.zeros_(out.weight)
+    nn.init.zeros_(out.bias)
+    layers.append(out)
     return nn.Sequential(*layers)
 
 
@@ -118,9 +121,12 @@ def _make_residual_conv_stack(
         [
             nn.Conv2d(hidden_channels, hidden_channels, kernel_size=1),
             nn.GELU(),
-            nn.Conv2d(hidden_channels, forecast_horizon, kernel_size=1),
         ]
     )
+    out = nn.Conv2d(hidden_channels, forecast_horizon, kernel_size=1)
+    nn.init.zeros_(out.weight)
+    nn.init.zeros_(out.bias)
+    layers.append(out)
     return nn.Sequential(*layers)
 
 
