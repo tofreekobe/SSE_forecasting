@@ -55,3 +55,24 @@ GNSS-only inversion -> slip
 ```
 
 A paper-grade inversion module needs a separately trained and evaluated GNSS-to-slip head with its own baselines, uncertainty checks, and physical metrics.
+
+## Demonstration Inversion Proxy
+
+For a practical GNSS-to-slip inversion demonstration, use the ridge-regression proxy:
+
+```powershell
+.\.venv-cu128\Scripts\python.exe scripts\demo_inversion_proxy.py `
+  --run-dir forecast_training_5070ti_full_streaming\random `
+  --package-dir hf_dataset_package `
+  --split test `
+  --index 0 `
+  --max-train-events 1200
+```
+
+Outputs are written to `<run-dir>\demo_inversion_proxy`:
+
+- `inversion_proxy_event_<id>.json`: RMSE, mean/zero baseline comparison, M0 error.
+- `inversion_proxy_event_<id>.png`: true slip, proxy inversion, mean baseline, and error maps for both subfaults.
+- `inversion_proxy_event_<id>.npz`: arrays for independent plotting or MATLAB inspection.
+
+This script is intentionally labeled as a proxy. It demonstrates the operational data flow for inversion, but the paper should only claim inversion after a dedicated inversion model is trained and tested.

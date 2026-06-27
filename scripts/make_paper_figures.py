@@ -6,10 +6,19 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
+import sys
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from src.dataset.forecast_contract import GRID_DEPTH, GRID_WIDTH_SEG1, GRID_WIDTH_SEG2
+from src.dataset.package_forecast_contract import iter_package_events
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:
@@ -26,6 +35,21 @@ def _read_history(path: Path) -> list[dict[str, float]]:
         for row in csv.DictReader(f):
             rows.append({key: float(value) for key, value in row.items() if value != ""})
     return rows
+
+
+def _split_vector(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    seg1_size = GRID_DEPTH * GRID_WIDTH_SEG1
+    return (
+        arr[:seg1_size].reshape(GRID_DEPTH, GRID_WIDTH_SEG1),
+        arr[seg1_size:].reshape(GRID_DEPTH, GRID_WIDTH_SEG2),
+    )
+
+
+def _load_package_event(package_dir: Path, event_id: int) -> tuple[np.ndarray, np.ndarray]:
+    for loaded_id, slip, gnss in iter_package_events(package_dir, [event_id]):
+        if int(loaded_id) == int(event_id):
+            return slip, gnss
+    raise RuntimeError(f"Event {event_id} not found in {package_dir}")
 
 
 def _save_method_overview(output_dir: Path) -> Path:
@@ -67,6 +91,110 @@ def _save_method_overview(output_dir: Path) -> Path:
 
     ax.text(6.4, 4.55, "Two disconnected subfaults are modeled separately", fontsize=12, weight="bold")
     ax.text(0.4, 0.35, "Primary claim: 50-step synthetic SSE slip-field forecasting with physical-unit baselines", fontsize=11)
+    fig.tight_layout()
+    fig.savefig(path, dpi=220)
+    plt.close(fig)
+    return path
+
+
+def _save_data_contract_figure(training_dir: Path, package_dir: Path, output_dir: Path) -> Path | None:
+    split_path = training_dir / "random" / "split_event_ids.json"
+    stats_path = training_dir / "random" / "forecast_contract_stats.json"
+    if not split_path.exists() or not stats_path.exists() or not package_dir.exists():
+        return None
+
+    splits = _read_json(split_path)
+    stats = _read_json(stats_path)
+    if not splits or not stats:
+        return None
+    event_id = int(splits["test"][0])
+    history_steps = int(stats["history_steps"])
+    horizon = int(stats["forecast_horizon"])
+    slip, gnss = _load_package_event(package_dir, event_id)
+    future_end = history_steps + horizon
+    m0 = slip.sum(axis=1)
+    seg1_last, seg2_last = _split_vector(slip[history_steps - 1])
+    seg1_future, seg2_future = _split_vector(slip[future_end - 1])
+
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.gridspec import GridSpec
+
+    path = output_dir / "fig_data_contract_event_window.png"
+    fig = plt.figure(figsize=(13.5, 8.4))
+    gs = GridSpec(3, 4, figure=fig, height_ratios=[1.1, 1.0, 1.05])
+
+    ax_m0 = fig.add_subplot(gs[0, :2])
+    steps = np.arange(slip.shape[0])
+    ax_m0.plot(steps, m0, color="#1f77b4", linewidth=2)
+    ax_m0.axvspan(0, history_steps - 1, color="#d7e8f6", alpha=0.7, label="history")
+    ax_m0.axvspan(history_steps, future_end - 1, color="#f7dfc8", alpha=0.8, label="forecast target")
+    ax_m0.axvline(history_steps, color="#333333", linewidth=1.2)
+    ax_m0.set_title(f"Event {event_id}: slip moment proxy and forecast window")
+    ax_m0.set_xlabel("Time step")
+    ax_m0.set_ylabel("Sum slip")
+    ax_m0.grid(alpha=0.25)
+    ax_m0.legend()
+
+    ax_gnss = fig.add_subplot(gs[0, 2:])
+    for idx in range(min(3, gnss.shape[1])):
+        ax_gnss.plot(steps[:history_steps], gnss[:history_steps, idx], label=f"GNSS {idx + 1}")
+    ax_gnss.axvline(history_steps, color="#333333", linewidth=1.2)
+    ax_gnss.set_title("Observed GNSS history used by the model")
+    ax_gnss.set_xlabel("Time step")
+    ax_gnss.set_ylabel("Displacement")
+    ax_gnss.grid(alpha=0.25)
+    ax_gnss.legend(fontsize=8)
+
+    panels = [
+        ("Segment 1 last history", seg1_last),
+        ("Segment 2 last history", seg2_last),
+        ("Segment 1 final target", seg1_future),
+        ("Segment 2 final target", seg2_future),
+    ]
+    vmax = max(float(np.max(panel)) for _, panel in panels)
+    for idx, (title, grid) in enumerate(panels):
+        ax = fig.add_subplot(gs[1 + idx // 2, (idx % 2) * 2 : (idx % 2) * 2 + 2])
+        im = ax.imshow(grid, aspect="auto", cmap="viridis", vmin=0.0, vmax=vmax)
+        ax.set_title(title)
+        ax.set_xlabel("Along strike")
+        ax.set_ylabel("Depth")
+        fig.colorbar(im, ax=ax, fraction=0.03, pad=0.02)
+
+    fig.tight_layout()
+    fig.savefig(path, dpi=220)
+    plt.close(fig)
+    return path
+
+
+def _save_baseline_horizon_curves(training_dir: Path, output_dir: Path) -> Path | None:
+    baseline_by_split: dict[str, dict[str, Any]] = {}
+    for split in ("random", "blocked"):
+        metrics = _read_json(training_dir / split / "baseline_test_baseline.json")
+        if metrics:
+            baseline_by_split[split] = metrics
+    if not baseline_by_split:
+        return None
+
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    path = output_dir / "fig_baseline_horizon_curves.png"
+    fig, axes = plt.subplots(1, len(baseline_by_split), figsize=(6.2 * len(baseline_by_split), 4.4), squeeze=False)
+    for ax, (split, metrics) in zip(axes.reshape(-1), baseline_by_split.items()):
+        horizons = sorted(int(h) for h in metrics)
+        ax.plot(horizons, [metrics[str(h)]["rmse_zero"] for h in horizons], marker="o", label="zero")
+        ax.plot(horizons, [metrics[str(h)]["rmse_mean"] for h in horizons], marker="o", label="mean")
+        ax.plot(horizons, [metrics[str(h)]["rmse_persistence"] for h in horizons], marker="o", label="persistence")
+        ax.set_title(f"{split} test baselines")
+        ax.set_xlabel("Forecast horizon")
+        ax.set_ylabel("Physical RMSE")
+        ax.grid(alpha=0.25)
+        ax.legend()
     fig.tight_layout()
     fig.savefig(path, dpi=220)
     plt.close(fig)
@@ -212,6 +340,10 @@ def _write_image_prompts(output_dir: Path) -> Path:
                 "",
                 "Create a journal-style multi-panel layout that preserves these panels: h50 RMSE model vs persistence vs mean, RMSE improvement percent with random and blocked gates, M0 relative error change, validation RMSE curves, and event-level final slip maps. Use clear panel labels and leave room for captions.",
                 "",
+                "## Geophysics Data-Contract Figure",
+                "",
+                "Create a clean geophysics journal figure showing one synthetic slow slip event: top panels with summed slip moment and three GNSS history channels, vertical line at forecast_start=60, shaded 50-step forecast target window, and lower panels with separated segment-1 and segment-2 fault slip maps at last history and final target. Preserve the two disconnected subfaults and avoid showing them as one continuous fault.",
+                "",
             ]
         ),
         encoding="utf-8",
@@ -222,16 +354,20 @@ def _write_image_prompts(output_dir: Path) -> Path:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build paper-facing SSE forecast figures.")
     parser.add_argument("--training-dir", default="forecast_training_5070ti_lite")
+    parser.add_argument("--package-dir", default="hf_dataset_package")
     parser.add_argument("--output-dir", default="paper_figures")
     args = parser.parse_args()
 
     training_dir = Path(args.training_dir)
+    package_dir = Path(args.package_dir)
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     outputs: list[str] = []
     for maybe_path in (
         _save_method_overview(output_dir),
+        _save_data_contract_figure(training_dir, package_dir, output_dir),
+        _save_baseline_horizon_curves(training_dir, output_dir),
         _save_performance_summary(training_dir, output_dir),
         _save_training_curves(training_dir, output_dir),
         _save_event_montage(training_dir, output_dir),
@@ -240,7 +376,12 @@ def main() -> int:
         if maybe_path is not None:
             outputs.append(str(maybe_path))
 
-    manifest = {"training_dir": str(training_dir), "output_dir": str(output_dir), "figures": outputs}
+    manifest = {
+        "training_dir": str(training_dir),
+        "package_dir": str(package_dir),
+        "output_dir": str(output_dir),
+        "figures": outputs,
+    }
     (output_dir / "figure_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     print(json.dumps(manifest, indent=2))
     return 0
