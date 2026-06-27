@@ -274,6 +274,22 @@ demo_pages\forecast_random_full\index.html
 - 事件级 true/model/persistence M0 曲线；
 - 最终 slip map 与误差图。
 
+
+一键启动本地 GUI：
+
+```powershell
+.\.venv-cu128\Scripts\python.exe scripts\serve_demo_gui.py `
+  --device cuda
+```
+
+只验证页面可生成而不启动长驻服务：
+
+```powershell
+.\.venv-cu128\Scripts\python.exe scripts\serve_demo_gui.py `
+  --device cpu `
+  --check-only
+```
+
 ## 11. 反演演示边界
 
 当前可用反演脚本是 ridge-regression proxy：

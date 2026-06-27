@@ -70,6 +70,33 @@ The page also includes the ridge-regression inversion proxy figure when present.
 This is useful for demonstrating the expected GNSS-to-slip workflow, but it is
 not a paper-grade inversion model.
 
+## One-Command Local GUI
+
+For a more convenient demonstration, start a local browser GUI from the generated
+static report:
+
+```powershell
+.\.venv-cu128\Scripts\python.exe scripts\serve_demo_gui.py `
+  --device cuda
+```
+
+The launcher automatically uses the first available final local run, regenerates
+`demo_pages\forecast_random_full\index.html` when needed, starts a local HTTP
+server, and prints the URL. Use `Ctrl+C` in the terminal to stop the server.
+
+To validate the demo without opening a long-running server:
+
+```powershell
+.\.venv-cu128\Scripts\python.exe scripts\serve_demo_gui.py `
+  --device cpu `
+  --check-only
+```
+
+This reports the demo page path, forecast figure count, and inversion proxy
+figure count. The generated `demo_pages` directory is intentionally ignored by
+Git because it is reproducible from tracked scripts and local experiment
+outputs.
+
 ## Inversion Boundary
 
 Current usable checkpoint solves:

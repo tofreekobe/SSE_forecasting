@@ -93,3 +93,4 @@ See [research_notes/pre_refactor_literature_review.md](research_notes/pre_refact
 - Paper-ready result tables: [docs/paper_result_tables_current.md](docs/paper_result_tables_current.md)
 - Literature matrix: [docs/literature_matrix_zh.md](docs/literature_matrix_zh.md)
 - Complete Chinese usage guide: [docs/complete_usage_guide_zh.md](docs/complete_usage_guide_zh.md)
+- Forecast/inversion demo GUI usage: [docs/model_demo_usage.md](docs/model_demo_usage.md)
