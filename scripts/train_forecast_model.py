@@ -68,36 +68,68 @@ def forecast_loss(
 
 
 @torch.no_grad()
-def evaluate_model(model, loader, slip_transform, device: torch.device) -> dict[str, float]:
+def evaluate_model(
+    model,
+    loader,
+    slip_transform,
+    device: torch.device,
+    max_batches: int | None = None,
+) -> dict[str, float]:
     model.eval()
-    pred_encoded = []
-    true_encoded = []
-    for batch in loader:
+    encoded_sse = 0.0
+    physical_sse = 0.0
+    true_sum = 0.0
+    true_sq_sum = 0.0
+    total_values = 0
+    m0_rel_sum = 0.0
+    m0_count = 0
+    batch_count = 0
+    event_count = 0
+    for batch_idx, batch in enumerate(loader):
+        if max_batches is not None and batch_idx >= max_batches:
+            break
         history_slip = batch["history_slip"].to(device)
         history_gnss = batch["history_gnss"].to(device)
         target = batch["future_slip"].to(device)
         pred = model(history_slip, history_gnss)
-        pred_encoded.append(pred.cpu().numpy())
-        true_encoded.append(target.cpu().numpy())
 
-    pred_encoded_np = np.concatenate(pred_encoded, axis=0)
-    true_encoded_np = np.concatenate(true_encoded, axis=0)
-    encoded_mse = float(np.mean((pred_encoded_np - true_encoded_np) ** 2))
-    pred_physical = slip_transform.decode(pred_encoded_np)
-    true_physical = slip_transform.decode(true_encoded_np)
-    err = pred_physical - true_physical
-    rmse = float(np.sqrt(np.mean(err**2)))
-    yt = true_physical.reshape(-1)
-    yp = pred_physical.reshape(-1)
-    r2 = float(1.0 - np.sum((yp - yt) ** 2) / max(np.sum((yt - float(np.mean(yt))) ** 2), 1e-12))
-    true_m0 = np.sum(true_physical, axis=2)
-    pred_m0 = np.sum(pred_physical, axis=2)
-    m0_rel_abs = float(np.mean(np.abs(pred_m0 - true_m0) / np.maximum(np.abs(true_m0), 1e-8)))
+        pred_encoded_np = pred.float().cpu().numpy()
+        true_encoded_np = target.float().cpu().numpy()
+        encoded_err = pred_encoded_np - true_encoded_np
+        encoded_sse += float(np.sum(encoded_err.astype(np.float64) ** 2))
+
+        pred_physical = slip_transform.decode(pred_encoded_np)
+        true_physical = slip_transform.decode(true_encoded_np)
+        err = pred_physical.astype(np.float64) - true_physical.astype(np.float64)
+        physical_sse += float(np.sum(err**2))
+        true_physical64 = true_physical.astype(np.float64)
+        true_sum += float(np.sum(true_physical64))
+        true_sq_sum += float(np.sum(true_physical64**2))
+        total_values += int(true_physical.size)
+
+        true_m0 = np.sum(true_physical, axis=2)
+        pred_m0 = np.sum(pred_physical, axis=2)
+        m0_rel_sum += float(np.sum(np.abs(pred_m0 - true_m0) / np.maximum(np.abs(true_m0), 1e-8)))
+        m0_count += int(true_m0.size)
+        event_count += int(true_encoded_np.shape[0])
+        batch_count += 1
+
+    if total_values == 0:
+        raise RuntimeError("Cannot evaluate an empty loader")
+
+    encoded_mse = encoded_sse / total_values
+    rmse = float(np.sqrt(physical_sse / total_values))
+    true_mean = true_sum / total_values
+    sst = max(true_sq_sum - total_values * true_mean**2, 1e-12)
+    r2 = float(1.0 - physical_sse / sst)
+    m0_rel_abs = m0_rel_sum / max(m0_count, 1)
     return {
-        "encoded_mse": encoded_mse,
+        "encoded_mse": float(encoded_mse),
         "physical_rmse": rmse,
         "physical_r2": r2,
-        "m0_rel_abs": m0_rel_abs,
+        "m0_rel_abs": float(m0_rel_abs),
+        "event_count": float(event_count),
+        "batch_count": float(batch_count),
     }
 
 
@@ -222,6 +254,12 @@ def main() -> int:
     parser.add_argument("--amp", action="store_true", help="Use CUDA mixed precision when a GPU is available.")
     parser.add_argument("--tensorboard-dir", default=None, help="TensorBoard log dir. Use 'off' to disable.")
     parser.add_argument("--log-every", type=int, default=1)
+    parser.add_argument(
+        "--train-eval-max-batches",
+        type=int,
+        default=None,
+        help="Limit train-split evaluation batches; validation and test are still evaluated fully.",
+    )
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -373,7 +411,7 @@ def main() -> int:
             total_batches += 1
 
         if epoch == 1 or epoch % args.log_every == 0 or epoch == args.epochs:
-            train_metrics = evaluate_model(model, train_loader, slip_transform, device)
+            train_metrics = evaluate_model(model, train_loader, slip_transform, device, args.train_eval_max_batches)
             val_metrics = evaluate_model(model, val_loader, slip_transform, device)
             row = {
                 "epoch": float(epoch),
@@ -402,7 +440,7 @@ def main() -> int:
 
     if best_state is not None:
         model.load_state_dict(best_state)
-    final_train = evaluate_model(model, train_loader, slip_transform, device)
+    final_train = evaluate_model(model, train_loader, slip_transform, device, args.train_eval_max_batches)
     final_val = evaluate_model(model, val_loader, slip_transform, device)
     final_test = evaluate_model(model, test_loader, slip_transform, device) if test_loader else None
 
@@ -434,6 +472,7 @@ def main() -> int:
         "forecast_start": args.forecast_start,
         "forecast_horizon": args.forecast_horizon,
         "model_type": args.model_type,
+        "train_eval_max_batches": args.train_eval_max_batches,
         "final_train": final_train,
         "final_val": final_val,
         "final_test": final_test,

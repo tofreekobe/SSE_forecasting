@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 .pytest_cache/
 .pytest_tmp/
+.pytest_tmp*/
 .mypy_cache/
 .ruff_cache/
 
@@ -29,6 +30,7 @@ paper/
 /baseline_results/
 /forecast_training*/
 /small_overfit*/
+/paper_figures*/
 /logs/
 /checkpoints/
 /runs/

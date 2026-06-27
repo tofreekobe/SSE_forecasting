@@ -6,13 +6,14 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 
 from src.dataset.forecast_contract import (
     SSEForecastDataset,
     build_forecast_contract,
     load_event_arrays,
 )
-from src.dataset.package_forecast_contract import build_package_forecast_contract
+from src.dataset.package_forecast_contract import SSEPackageForecastDataset, build_package_forecast_contract
 from src.models.forecast_baselines import (
     compute_package_train_mean_slip,
     compute_train_mean_slip,
@@ -20,6 +21,7 @@ from src.models.forecast_baselines import (
     evaluate_physical_baselines,
 )
 from src.models.small_forecast_net import SegmentedResidualForecastNet, SegmentedSlipConvForecastNet, SlipConvForecastNet
+from scripts.train_forecast_model import evaluate_model
 
 
 def _write_event(path: Path, event_id: int, amplitude: float) -> None:
@@ -165,3 +167,31 @@ def test_segmented_residual_forecast_net_forward_shape():
 
     assert pred.shape == (2, 5, 3030)
     assert float(pred.detach().min()) >= 0.0
+
+
+def test_streaming_forecast_evaluation_respects_max_batches(tmp_path):
+    package_dir = tmp_path / "hf_package"
+    _write_package(package_dir)
+    splits, slip_transform, gnss_norm, stats = build_package_forecast_contract(
+        package_dir,
+        protocol="blocked",
+        history_ratio=0.5,
+        forecast_horizon=5,
+    )
+    ds = SSEPackageForecastDataset(
+        package_dir,
+        splits.train,
+        slip_transform,
+        gnss_norm,
+        history_steps=stats.history_steps,
+        forecast_horizon=5,
+    )
+    loader = DataLoader(ds, batch_size=2, shuffle=False, num_workers=0)
+    model = SegmentedResidualForecastNet(history_steps=stats.history_steps, forecast_horizon=5, hidden_channels=8)
+
+    metrics = evaluate_model(model, loader, slip_transform, torch.device("cpu"), max_batches=1)
+
+    assert metrics["batch_count"] == 1.0
+    assert metrics["event_count"] == 2.0
+    assert np.isfinite(metrics["physical_rmse"])
+    assert np.isfinite(metrics["physical_r2"])
