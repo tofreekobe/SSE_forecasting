@@ -8,6 +8,9 @@ Environment:
 - Driver CUDA: 12.8
 - PyTorch: 2.11.0+cu128
 - CUDA capability: sm_120
+- Data scope: full 6000-event raw catalog, `79,673,958,000` bytes
+  (`74.202 GiB`), represented by the audited compressed package
+  `hf_dataset_package/` (`2.838 GiB`) for training.
 
 Key change:
 
@@ -43,5 +46,5 @@ Full-training notes:
 
 - Full training used `segmented_residual`, `forecast_start=60`, `forecast_horizon=50`, batch size `16`, `50` epochs, AMP, and `train_eval_max_batches=32`.
 - Validation and test metrics are full-split metrics; train metrics are intentionally capped to avoid memory-heavy full-train evaluation.
-- Current results are for the compressed synthetic SSE package and do not validate real earthquake prediction or operational warning.
+- Current results are for the full synthetic SSE catalog stored in the audited compressed training package and do not validate real earthquake prediction or operational warning.
 - The unusually high full-split scores are plausible for this synthetic setting with history slip available, but they should be followed by stricter generalization checks: event-family holdout, noise/station ablation, GNSS-only auxiliary inversion, and a target-leakage audit.

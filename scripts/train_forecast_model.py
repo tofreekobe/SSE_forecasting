@@ -303,6 +303,7 @@ def main() -> int:
     output_dir = Path(args.output_dir) / args.protocol
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    print(f"[setup] scanning package events from {args.package_dir}", flush=True)
     all_ids = scan_package_event_ids(args.package_dir)
     splits = make_event_splits_from_ids(all_ids, protocol=args.protocol, seed=args.seed)
     train_ids = _limit(splits.train, args.max_train_events)
@@ -310,9 +311,17 @@ def main() -> int:
     test_ids = _limit(splits.test, args.max_test_events)
     if not train_ids or not val_ids:
         raise RuntimeError("Training and validation splits must be non-empty")
+    print(
+        f"[setup] split={args.protocol} train={len(train_ids)} val={len(val_ids)} test={len(test_ids)}",
+        flush=True,
+    )
 
+    print("[setup] fitting slip transform", flush=True)
     slip_transform = fit_package_slip_transform(args.package_dir, train_ids)
+    print(f"[setup] slip_scale={slip_transform.scale:.8g}", flush=True)
+    print("[setup] fitting GNSS normalizer", flush=True)
     gnss_normalizer = fit_package_gnss_normalizer(args.package_dir, train_ids)
+    print("[setup] GNSS normalizer ready", flush=True)
     stats = ForecastContractStats(
         split_protocol=args.protocol,
         train_event_count=len(train_ids),
@@ -330,6 +339,7 @@ def main() -> int:
         encoding="utf-8",
     )
 
+    print("[setup] loading train dataset", flush=True)
     train_ds = SSEPackageForecastDataset(
         args.package_dir,
         train_ids,
@@ -338,6 +348,8 @@ def main() -> int:
         history_steps=args.forecast_start,
         forecast_horizon=args.forecast_horizon,
     )
+    print(f"[setup] train dataset loaded: {len(train_ds)} events", flush=True)
+    print("[setup] loading validation dataset", flush=True)
     val_ds = SSEPackageForecastDataset(
         args.package_dir,
         val_ids,
@@ -346,6 +358,8 @@ def main() -> int:
         history_steps=args.forecast_start,
         forecast_horizon=args.forecast_horizon,
     )
+    print(f"[setup] validation dataset loaded: {len(val_ds)} events", flush=True)
+    print("[setup] loading test dataset", flush=True)
     test_ds = (
         SSEPackageForecastDataset(
             args.package_dir,
@@ -358,6 +372,7 @@ def main() -> int:
         if test_ids
         else None
     )
+    print(f"[setup] test dataset loaded: {len(test_ds) if test_ds else 0} events", flush=True)
 
     device = choose_device(args.device)
     pin_memory = device.type == "cuda"
@@ -381,7 +396,9 @@ def main() -> int:
         else None
     )
 
+    print("[setup] computing train mean baseline", flush=True)
     train_mean = compute_package_train_mean_slip(args.package_dir, train_ids)
+    print("[setup] evaluating validation baselines", flush=True)
     val_baselines = evaluate_package_physical_baselines(
         args.package_dir,
         val_ids,
@@ -391,6 +408,7 @@ def main() -> int:
     )
     write_metrics(output_dir, "val_baseline", val_baselines)
     if test_ids:
+        print("[setup] evaluating test baselines", flush=True)
         test_baselines = evaluate_package_physical_baselines(
             args.package_dir,
             test_ids,
@@ -401,6 +419,7 @@ def main() -> int:
         write_metrics(output_dir, "test_baseline", test_baselines)
     else:
         test_baselines = {}
+    print("[setup] baselines ready", flush=True)
 
     model = build_model(args).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-5)
