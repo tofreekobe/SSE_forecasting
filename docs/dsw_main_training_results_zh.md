@@ -44,12 +44,15 @@
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | main_residual_full | random | segmented_residual | full | 0.005 | 0.00142173 | 0.0592355 | 97.60% | 0.999408 | 0.0155652 | PASS |
 | main_residual_full | blocked | segmented_residual | full | 0.005 | 0.00152041 | 0.0608568 | 97.50% | 0.999359 | 0.0166794 | PASS |
+| model_plain_full | random | plain | full | 0.005 | 0.00431510 | 0.0592355 | 92.72% | 0.994546 | 0.0136518 | PASS |
 | model_segmented_full | random | segmented | full | 0.005 | 0.00473668 | 0.0592355 | 92.00% | 0.993428 | 0.0238614 | PASS |
 | model_segmented_full | blocked | segmented | full | 0.005 | 0.00506467 | 0.0608568 | 91.68% | 0.992884 | 0.0323756 | PASS |
 
-初步架构消融结论：`segmented` 在 random 与 blocked split 上仍然明显超过 persistence，
-但 RMSE 约为 `segmented_residual` 的 3.3 倍，M0 误差也更高。这说明仅仅拆分两子断层
-还不够，residual 预测头和归一化/残差结构对高精度 future slip forecasting 有实质贡献。
+初步架构消融结论：`plain` 与 `segmented` 在已完成 split 上都明显超过 persistence，
+但 h50 RMSE 约为 `segmented_residual` 的 3 倍。`plain/random` 的 M0 误差低于
+`segmented/random`，说明不能简单宣称“几何拆分在所有指标上都更优”；目前最稳妥的结论是
+residual 预测头和归一化/残差结构对高精度 future slip forecasting 有实质贡献。几何拆分
+是否改善 blocked 泛化，需要等待 `plain/blocked` 完成后再下结论。
 
 ## 结论
 
@@ -60,6 +63,6 @@ data contract、`log1p` slip target、全局 GNSS 归一化、两子断层
 
 完整消融矩阵仍在后台继续运行，后续应补充：
 
-- `plain` random/blocked split
+- `plain` blocked split
 - `full` vs `no_gnss` vs `gnss_only` vs `last_slip_only`
 - `m0_loss_weight=0.005` vs `0`
