@@ -249,9 +249,9 @@ PAI-DSW A10 上已完成主模型 random 与 blocked split：
 
 消融实验进一步揭示了任务中的信息来源。移除 GNSS 后，模型在 random 与 blocked split 上
 仍能保持较好性能，说明 history slip 是当前 forecasting 任务的主导信息源；但 full input
-仍稳定优于 no-GNSS，表明 GNSS history 提供了额外边际约束。相反，GNSS-only random
-实验未能超过 persistence，h50 RMSE 与 zero-level baseline 接近，R2 为负。这一负结果
-非常重要：它说明在当前三站稀疏 GNSS 和模型设定下，直接从 GNSS 历史预测未来完整 slip
+仍稳定优于 no-GNSS，表明 GNSS history 提供了额外边际约束。相反，GNSS-only 在
+random 与 blocked split 上均未能超过 persistence，h50 RMSE 与 zero-level baseline
+接近，R2 为负。这一负结果非常重要：它说明在当前三站稀疏 GNSS 和模型设定下，直接从 GNSS 历史预测未来完整 slip
 field 仍不可行，真实业务应用必须依赖反演、同化或其他状态估计方法先获得 history slip。
 
 需要强调的是，结果很高并不意味着模型可以直接用于真实地震预测。当前输入包含 history slip，

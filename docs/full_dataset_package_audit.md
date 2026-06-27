@@ -24,6 +24,27 @@ The smaller package size is therefore expected compression, not a reduced
 dataset. The package stores the slip and GNSS columns needed by the forecasting
 contract and omits the metadata/time column already represented in the manifest.
 
+## 2026-06-28 Recheck
+
+The raw catalog size shown by the local filesystem is the correct authoritative
+scope: `74.202 GiB` for `6000` events. The audited training package remains
+`2.838 GiB` because it is a compressed representation of the same event set, not
+a subset. A fresh stratified resample audit was run after this concern was
+raised:
+
+- Raw event count: `6000`
+- Manifest event count: `6000`
+- Raw total bytes: `79,673,958,000`
+- Package total bytes: `3,047,677,208`
+- Shard count: `188`
+- Sampled raw-vs-package comparisons: `64`
+- Exact comparison failures: `0`
+- Manifest index repair changes: `0`
+
+DSW is also using the verified package path
+`/mnt/workspace/hf_dataset_package_verified_b1f13c4`, whose manifest contains
+the same `6000` events and `188` shard files.
+
 ## Correction Made
 
 The original `manifest.csv` contained a wrong `shard_index`: it stored the shard
