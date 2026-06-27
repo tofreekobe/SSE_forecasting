@@ -21,7 +21,7 @@ from src.models.forecast_baselines import (
     evaluate_physical_baselines,
 )
 from src.models.small_forecast_net import SegmentedResidualForecastNet, SegmentedSlipConvForecastNet, SlipConvForecastNet
-from scripts.train_forecast_model import evaluate_model
+from scripts.train_forecast_model import apply_input_mode, evaluate_model
 
 
 def _write_event(path: Path, event_id: int, amplitude: float) -> None:
@@ -195,3 +195,25 @@ def test_streaming_forecast_evaluation_respects_max_batches(tmp_path):
     assert metrics["event_count"] == 2.0
     assert np.isfinite(metrics["physical_rmse"])
     assert np.isfinite(metrics["physical_r2"])
+
+
+def test_apply_input_mode_ablations_are_explicit():
+    history_slip = torch.arange(2 * 4 * 3, dtype=torch.float32).reshape(2, 4, 3)
+    history_gnss = torch.ones((2, 4, 2), dtype=torch.float32)
+
+    slip_full, gnss_full = apply_input_mode(history_slip, history_gnss, "full")
+    assert torch.equal(slip_full, history_slip)
+    assert torch.equal(gnss_full, history_gnss)
+
+    slip_only, gnss_zero = apply_input_mode(history_slip, history_gnss, "no_gnss")
+    assert torch.equal(slip_only, history_slip)
+    assert torch.count_nonzero(gnss_zero) == 0
+
+    slip_zero, gnss_only = apply_input_mode(history_slip, history_gnss, "gnss_only")
+    assert torch.count_nonzero(slip_zero) == 0
+    assert torch.equal(gnss_only, history_gnss)
+
+    last_slip, gnss_kept = apply_input_mode(history_slip, history_gnss, "last_slip_only")
+    assert torch.count_nonzero(last_slip[:, :-1, :]) == 0
+    assert torch.equal(last_slip[:, -1:, :], history_slip[:, -1:, :])
+    assert torch.equal(gnss_kept, history_gnss)

@@ -35,9 +35,30 @@ from src.models.forecast_baselines import (
 )
 from src.models.small_forecast_net import SegmentedResidualForecastNet, SegmentedSlipConvForecastNet, SlipConvForecastNet
 
+INPUT_MODES = ("full", "no_gnss", "slip_only", "gnss_only", "no_history_slip", "last_slip_only")
+
 
 def _limit(ids: list[int], max_items: int | None) -> list[int]:
     return ids if max_items is None else ids[:max_items]
+
+
+def apply_input_mode(
+    history_slip: torch.Tensor,
+    history_gnss: torch.Tensor,
+    input_mode: str,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Apply input ablations without changing the dataset contract."""
+    if input_mode == "full":
+        return history_slip, history_gnss
+    if input_mode in {"no_gnss", "slip_only"}:
+        return history_slip, torch.zeros_like(history_gnss)
+    if input_mode in {"gnss_only", "no_history_slip"}:
+        return torch.zeros_like(history_slip), history_gnss
+    if input_mode == "last_slip_only":
+        ablated_slip = torch.zeros_like(history_slip)
+        ablated_slip[:, -1:, :] = history_slip[:, -1:, :]
+        return ablated_slip, history_gnss
+    raise ValueError(f"Unknown input_mode: {input_mode}")
 
 
 def weighted_mse(pred: torch.Tensor, target: torch.Tensor, active_weight: float) -> torch.Tensor:
@@ -74,6 +95,7 @@ def evaluate_model(
     slip_transform,
     device: torch.device,
     max_batches: int | None = None,
+    input_mode: str = "full",
 ) -> dict[str, float]:
     model.eval()
     encoded_sse = 0.0
@@ -90,6 +112,7 @@ def evaluate_model(
             break
         history_slip = batch["history_slip"].to(device)
         history_gnss = batch["history_gnss"].to(device)
+        history_slip, history_gnss = apply_input_mode(history_slip, history_gnss, input_mode)
         target = batch["future_slip"].to(device)
         pred = model(history_slip, history_gnss)
 
@@ -202,6 +225,7 @@ def write_report(output_dir: Path, payload: dict[str, object]) -> None:
         f"- Forecast start: {payload['forecast_start']}",
         f"- Forecast horizon: {payload['forecast_horizon']}",
         f"- Model type: `{payload['model_type']}`",
+        f"- Input mode: `{payload.get('input_mode', 'full')}`",
         "",
         "## Final Validation",
         "",
@@ -248,6 +272,15 @@ def main() -> int:
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--hidden-channels", type=int, default=64)
     parser.add_argument("--model-type", choices=["segmented_residual", "segmented", "plain"], default="segmented_residual")
+    parser.add_argument(
+        "--input-mode",
+        choices=INPUT_MODES,
+        default="full",
+        help=(
+            "Input ablation mode: full uses history slip and GNSS; no_gnss/slip_only zeros GNSS; "
+            "gnss_only/no_history_slip zeros history slip; last_slip_only keeps only the final observed slip step."
+        ),
+    )
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--active-weight", type=float, default=1.0)
     parser.add_argument("--m0-loss-weight", type=float, default=0.0)
@@ -376,7 +409,7 @@ def main() -> int:
     writer = maybe_make_writer(output_dir, args.tensorboard_dir)
     print(
         f"device={device}, amp={use_amp}, model={args.model_type}, "
-        f"train={len(train_ids)}, val={len(val_ids)}, test={len(test_ids)}",
+        f"input_mode={args.input_mode}, train={len(train_ids)}, val={len(val_ids)}, test={len(test_ids)}",
         flush=True,
     )
 
@@ -390,6 +423,7 @@ def main() -> int:
         for batch in train_loader:
             history_slip = batch["history_slip"].to(device)
             history_gnss = batch["history_gnss"].to(device)
+            history_slip, history_gnss = apply_input_mode(history_slip, history_gnss, args.input_mode)
             target = batch["future_slip"].to(device)
             with torch.amp.autocast("cuda", enabled=use_amp):
                 pred = model(history_slip, history_gnss)
@@ -411,8 +445,15 @@ def main() -> int:
             total_batches += 1
 
         if epoch == 1 or epoch % args.log_every == 0 or epoch == args.epochs:
-            train_metrics = evaluate_model(model, train_loader, slip_transform, device, args.train_eval_max_batches)
-            val_metrics = evaluate_model(model, val_loader, slip_transform, device)
+            train_metrics = evaluate_model(
+                model,
+                train_loader,
+                slip_transform,
+                device,
+                args.train_eval_max_batches,
+                input_mode=args.input_mode,
+            )
+            val_metrics = evaluate_model(model, val_loader, slip_transform, device, input_mode=args.input_mode)
             row = {
                 "epoch": float(epoch),
                 "train_loss": total_loss / max(total_batches, 1),
@@ -440,9 +481,16 @@ def main() -> int:
 
     if best_state is not None:
         model.load_state_dict(best_state)
-    final_train = evaluate_model(model, train_loader, slip_transform, device, args.train_eval_max_batches)
-    final_val = evaluate_model(model, val_loader, slip_transform, device)
-    final_test = evaluate_model(model, test_loader, slip_transform, device) if test_loader else None
+    final_train = evaluate_model(
+        model,
+        train_loader,
+        slip_transform,
+        device,
+        args.train_eval_max_batches,
+        input_mode=args.input_mode,
+    )
+    final_val = evaluate_model(model, val_loader, slip_transform, device, input_mode=args.input_mode)
+    final_test = evaluate_model(model, test_loader, slip_transform, device, input_mode=args.input_mode) if test_loader else None
 
     h = str(args.forecast_horizon)
     status = "PASS_BASELINE" if final_val["physical_rmse"] < val_baselines[h]["rmse_persistence"] else "BELOW_BASELINE"
@@ -472,6 +520,13 @@ def main() -> int:
         "forecast_start": args.forecast_start,
         "forecast_horizon": args.forecast_horizon,
         "model_type": args.model_type,
+        "input_mode": args.input_mode,
+        "epochs": args.epochs,
+        "batch_size": args.batch_size,
+        "hidden_channels": args.hidden_channels,
+        "learning_rate": args.lr,
+        "active_weight": args.active_weight,
+        "m0_loss_weight": args.m0_loss_weight,
         "train_eval_max_batches": args.train_eval_max_batches,
         "final_train": final_train,
         "final_val": final_val,
