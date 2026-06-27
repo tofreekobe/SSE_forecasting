@@ -9,6 +9,7 @@
 
 | Run | Split | Model | Input | M0 loss | h50 RMSE | Gain | R2 | M0 rel abs | Gate |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| ablate_gnss_only | random | segmented_residual | gnss_only | 0.005 | 0.060166 | -1.57% | -0.060367 | 1 | FAIL |
 | ablate_no_gnss | blocked | segmented_residual | no_gnss | 0.005 | 0.001927 | 96.83% | 0.99897 | 0.01731 | PASS |
 | ablate_no_gnss | random | segmented_residual | no_gnss | 0.005 | 0.002351 | 96.03% | 0.998382 | 0.027774 | PASS |
 | model_plain_full | blocked | plain | full | 0.005 | 0.005755 | 90.54% | 0.990813 | 0.02816 | PASS |

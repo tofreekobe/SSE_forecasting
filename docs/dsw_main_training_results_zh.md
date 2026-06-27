@@ -44,6 +44,7 @@
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | main_residual_full | random | segmented_residual | full | 0.005 | 0.00142173 | 0.0592355 | 97.60% | 0.999408 | 0.0155652 | PASS |
 | main_residual_full | blocked | segmented_residual | full | 0.005 | 0.00152041 | 0.0608568 | 97.50% | 0.999359 | 0.0166794 | PASS |
+| ablate_gnss_only | random | segmented_residual | gnss_only | 0.005 | 0.06016635 | 0.0592355 | -1.57% | -0.060367 | 1.000000 | FAIL |
 | ablate_no_gnss | random | segmented_residual | no_gnss | 0.005 | 0.00235053 | 0.0592355 | 96.03% | 0.998382 | 0.0277736 | PASS |
 | ablate_no_gnss | blocked | segmented_residual | no_gnss | 0.005 | 0.00192682 | 0.0608568 | 96.83% | 0.998970 | 0.0173103 | PASS |
 | model_plain_full | random | plain | full | 0.005 | 0.00431510 | 0.0592355 | 92.72% | 0.994546 | 0.0136518 | PASS |
@@ -64,6 +65,11 @@ residual 预测头和归一化/残差结构是高精度 future slip forecasting 
 blocked 上分别进一步降至 `0.00142173` 和 `0.00152041`，说明 GNSS history 提供了稳定
 边际增益，尤其体现在更低的滑移场 RMSE 和更稳的 M0 error 上。
 
+`gnss_only/random` 是当前矩阵中的第一个明确失败项：h50 RMSE 为 `0.06016635`，
+略差于 persistence，R2 为负，M0 relative absolute error 为 1。这说明仅凭三站 GNSS
+历史无法在当前模型设定下恢复未来 slip field；本文主模型成功依赖 history slip 状态，
+真实业务应用中需要由反演或数据同化系统提供该状态，不能声称 GNSS-only forecasting 已解决。
+
 ## 结论
 
 主模型在 DSW 上通过 random 与 blocked 两个全量 split 的 h50 publication gate。
@@ -73,6 +79,6 @@ data contract、`log1p` slip target、全局 GNSS 归一化、两子断层
 
 完整消融矩阵仍在后台继续运行，后续应补充：
 
-- `gnss_only` random/blocked split
+- `gnss_only` blocked split
 - `last_slip_only` random/blocked split
 - `m0_loss_weight=0.005` vs `0`
