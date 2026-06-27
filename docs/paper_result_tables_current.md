@@ -9,6 +9,7 @@
 
 | Run | Split | Model | Input | M0 loss | h50 RMSE | Gain | R2 | M0 rel abs | Gate |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| ablate_no_gnss | blocked | segmented_residual | no_gnss | 0.005 | 0.001927 | 96.83% | 0.99897 | 0.01731 | PASS |
 | ablate_no_gnss | random | segmented_residual | no_gnss | 0.005 | 0.002351 | 96.03% | 0.998382 | 0.027774 | PASS |
 | model_plain_full | blocked | plain | full | 0.005 | 0.005755 | 90.54% | 0.990813 | 0.02816 | PASS |
 | model_plain_full | random | plain | full | 0.005 | 0.004315 | 92.72% | 0.994546 | 0.013652 | PASS |
@@ -18,5 +19,5 @@
 ## Auto Notes
 
 - Main model best split result is `random` with h50 RMSE `0.001422`.
-- Best completed ablation so far is `ablate_no_gnss/random` with h50 RMSE `0.002351`.
+- Best completed ablation so far is `ablate_no_gnss/blocked` with h50 RMSE `0.001927`.
 - Treat this file as generated evidence; interpretive claims should still be checked against the full experiment context.

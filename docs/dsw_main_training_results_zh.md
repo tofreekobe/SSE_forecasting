@@ -45,6 +45,7 @@
 | main_residual_full | random | segmented_residual | full | 0.005 | 0.00142173 | 0.0592355 | 97.60% | 0.999408 | 0.0155652 | PASS |
 | main_residual_full | blocked | segmented_residual | full | 0.005 | 0.00152041 | 0.0608568 | 97.50% | 0.999359 | 0.0166794 | PASS |
 | ablate_no_gnss | random | segmented_residual | no_gnss | 0.005 | 0.00235053 | 0.0592355 | 96.03% | 0.998382 | 0.0277736 | PASS |
+| ablate_no_gnss | blocked | segmented_residual | no_gnss | 0.005 | 0.00192682 | 0.0608568 | 96.83% | 0.998970 | 0.0173103 | PASS |
 | model_plain_full | random | plain | full | 0.005 | 0.00431510 | 0.0592355 | 92.72% | 0.994546 | 0.0136518 | PASS |
 | model_plain_full | blocked | plain | full | 0.005 | 0.00575492 | 0.0608568 | 90.54% | 0.990813 | 0.0281596 | PASS |
 | model_segmented_full | random | segmented | full | 0.005 | 0.00473668 | 0.0592355 | 92.00% | 0.993428 | 0.0238614 | PASS |
@@ -57,10 +58,11 @@
 residual 预测头和归一化/残差结构是高精度 future slip forecasting 的主要增益来源，
 两子断层拆分则改善了 blocked split 的结构泛化。
 
-初步输入消融结论：`no_gnss/random` 仍然达到 `0.00235053` 的 h50 RMSE，
-明显超过 persistence，也优于已完成的 plain/segmented 架构消融。这说明在当前任务设定中
-history slip 是最强信息源；不过 full input 主模型的 random RMSE 仍进一步降至 `0.00142173`，
-说明 GNSS history 提供了可观边际增益，尤其体现在更低的滑移场 RMSE 和 M0 error 上。
+初步输入消融结论：`no_gnss` 在 random 与 blocked 上分别达到 `0.00235053` 和
+`0.00192682` 的 h50 RMSE，明显超过 persistence，也优于 plain/segmented 架构消融。
+这说明在当前任务设定中 history slip 是最强信息源；不过 full input 主模型在 random 和
+blocked 上分别进一步降至 `0.00142173` 和 `0.00152041`，说明 GNSS history 提供了稳定
+边际增益，尤其体现在更低的滑移场 RMSE 和更稳的 M0 error 上。
 
 ## 结论
 
@@ -71,7 +73,6 @@ data contract、`log1p` slip target、全局 GNSS 归一化、两子断层
 
 完整消融矩阵仍在后台继续运行，后续应补充：
 
-- `no_gnss` blocked split
 - `gnss_only` random/blocked split
 - `last_slip_only` random/blocked split
 - `m0_loss_weight=0.005` vs `0`
