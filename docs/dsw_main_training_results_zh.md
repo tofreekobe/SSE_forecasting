@@ -38,6 +38,18 @@
 | random | 0.00142173 | 0.0592355 | 97.60% | 0.999408 | 0.0155652 | 0.948833 | -98.36% | PASS |
 | blocked | 0.00152041 | 0.0608568 | 97.50% | 0.999359 | 0.0166794 | 0.948833 | -98.24% | PASS |
 
+## 已回收消融矩阵进度
+
+| Run | Split | Model | Input | M0 loss | Test h50 RMSE | Persistence | Gain | R2 | M0 rel abs | Gate |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| main_residual_full | random | segmented_residual | full | 0.005 | 0.00142173 | 0.0592355 | 97.60% | 0.999408 | 0.0155652 | PASS |
+| main_residual_full | blocked | segmented_residual | full | 0.005 | 0.00152041 | 0.0608568 | 97.50% | 0.999359 | 0.0166794 | PASS |
+| model_segmented_full | random | segmented | full | 0.005 | 0.00473668 | 0.0592355 | 92.00% | 0.993428 | 0.0238614 | PASS |
+
+初步消融结论：`segmented` 仍然明显超过 persistence，但 random split 上的
+RMSE 约为 `segmented_residual` 的 3.3 倍，说明 residual 预测头和归一化/残差结构
+对高精度 future slip forecasting 有实质贡献。
+
 ## 结论
 
 主模型在 DSW 上通过 random 与 blocked 两个全量 split 的 h50 publication gate。
@@ -47,6 +59,7 @@ data contract、`log1p` slip target、全局 GNSS 归一化、两子断层
 
 完整消融矩阵仍在后台继续运行，后续应补充：
 
-- `segmented` vs `segmented_residual` vs `plain`
+- `segmented` blocked split
+- `plain` random/blocked split
 - `full` vs `no_gnss` vs `gnss_only` vs `last_slip_only`
 - `m0_loss_weight=0.005` vs `0`
