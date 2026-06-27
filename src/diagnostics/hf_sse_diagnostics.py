@@ -202,11 +202,11 @@ def build_hf_dataset_package(
             slip=np.stack(shard_slip, axis=0).astype(np.float32),
             gnss=np.stack(shard_gnss, axis=0).astype(np.float32),
         )
-        for event_id in shard_event_ids:
+        for local_index, event_id in enumerate(shard_event_ids):
             for row in manifest_rows:
                 if row["event_id"] == event_id:
                     row["shard_file"] = f"events/{shard_name}"
-                    row["shard_index"] = shard_index
+                    row["shard_index"] = local_index
                     break
         shard_index += 1
         shard_slip = []
