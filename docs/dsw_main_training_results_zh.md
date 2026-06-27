@@ -13,7 +13,7 @@
 ## DSW 环境
 
 - 实例：PAI-DSW `final_sse`
-- GPU：NVIDIA V100-SXM2-16GB
+- GPU：NVIDIA A10（`nvidia-smi` 当前实测显存约 23 GiB）
 - 代码包：`/mnt/workspace/sse_codex_b1f13c4`
 - 输出目录：
   `/mnt/workspace/sse_outputs/experiment_matrix_b1f13c4_full`
@@ -50,4 +50,3 @@ data contract、`log1p` slip target、全局 GNSS 归一化、两子断层
 - `segmented` vs `segmented_residual` vs `plain`
 - `full` vs `no_gnss` vs `gnss_only` vs `last_slip_only`
 - `m0_loss_weight=0.005` vs `0`
-

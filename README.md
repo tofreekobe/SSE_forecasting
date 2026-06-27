@@ -82,3 +82,10 @@ See [docs/local_cuda_5070ti.md](docs/local_cuda_5070ti.md) for the local `torch 
 ## Research Notes
 
 See [research_notes/pre_refactor_literature_review.md](research_notes/pre_refactor_literature_review.md) for the pre-refactor literature review and final research positioning.
+
+## Current Full-Data Evidence
+
+- Full raw/package audit: [docs/full_dataset_package_audit.md](docs/full_dataset_package_audit.md)
+- DSW main training results: [docs/dsw_main_training_results_zh.md](docs/dsw_main_training_results_zh.md)
+- Final conference paper outline: [docs/final_conference_paper_outline_zh.md](docs/final_conference_paper_outline_zh.md)
+- Complete Chinese usage guide: [docs/complete_usage_guide_zh.md](docs/complete_usage_guide_zh.md)
