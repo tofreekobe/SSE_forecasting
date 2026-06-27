@@ -2,6 +2,10 @@
 
 更新时间：2026-06-28
 
+> 2026-06-28 更新：DSW 全量 14 项实验矩阵已经全部完成并回收。本文档保留为投稿结构
+> 设计稿；连续论文母稿请以 `docs/final_paper_manuscript_zh.md` 为准，结果表以
+> `docs/paper_result_tables_current.md` 和 `docs/dsw_main_training_results_zh.md` 为准。
+
 ## 推荐题目
 
 **Geometry-Aware Multi-Step Forecasting of Synthetic Slow Slip Evolution from Sparse Geodetic Histories**
@@ -142,16 +146,16 @@ target = future_slip[60:110]
 | full random main | done | 同分布泛化主结果 |
 | full blocked main | done | 分块泛化主结果 |
 
-正在跑/待补齐：
+已完成的全量消融矩阵：
 
-| Experiment | Model/Input | Purpose |
+| Experiment | Model/Input | Key conclusion |
 | --- | --- | --- |
-| segmented vs segmented_residual | architecture ablation | 验证残差与结构归纳偏置 |
-| plain `15x202` vs segmented | geometry ablation | 验证避免两子断层伪邻接的收益 |
-| no_gnss | input ablation | 衡量 GNSS history 的增益 |
-| gnss_only | input ablation | 估计无 history slip 时任务难度 |
-| last_slip_only | input ablation | 衡量完整历史 slip 是否必要 |
-| no_m0_loss | loss ablation | 验证 M0 auxiliary loss 对物理指标的影响 |
+| segmented vs segmented_residual | architecture ablation | residual 结构是主要性能来源 |
+| plain `15x202` vs segmented | geometry ablation | 两子断层拆分改善 blocked 泛化，但不是所有指标都优于 plain |
+| no_gnss | input ablation | history slip 是主导信息源，GNSS 提供边际增益 |
+| gnss_only | input ablation | random/blocked 均失败，不能声称 GNSS-only forecasting 已解决 |
+| last_slip_only | input ablation | 最后一帧 slip 很强，但完整 history/GNSS 仍改善 RMSE 与 M0 |
+| no_m0_loss | loss ablation | 可降低部分 RMSE，但 M0 物理一致性明显恶化 |
 
 ### 6. Results
 
@@ -213,21 +217,20 @@ target = future_slip[60:110]
 | Figure/Table | 内容 | 状态 |
 | --- | --- | --- |
 | Figure 1 | 两子断层几何 + 三站 GNSS + 任务窗口 | 可用现有 paper 图片/MATLAB 图重绘 |
-| Figure 2 | Data contract 与模型流程图 | 待绘 |
-| Figure 3 | `segmented_residual` 架构图 | 待绘 |
+| Figure 2 | Data contract 与模型流程图 | 已有 Mermaid 草图，见 `docs/final_paper_manuscript_zh.md` |
+| Figure 3 | `segmented_residual` 架构图 | 已有 Mermaid 草图，见 `docs/final_paper_manuscript_zh.md` |
 | Figure 4 | random/blocked 训练曲线 | 已可由脚本生成 |
 | Figure 5 | 事件级 future slip map 与 M0 curve | 已可由 demo 生成 |
 | Table 1 | 数据集统计与审计结果 | 已有数据 |
 | Table 2 | baseline vs main model | 已有主结果 |
-| Table 3 | architecture ablation | 等 DSW 矩阵 |
-| Table 4 | input/loss ablation | 等 DSW 矩阵 |
+| Table 3 | architecture ablation | 已完成，见 `docs/paper_result_tables_current.md` |
+| Table 4 | input/loss ablation | 已完成，见 `docs/paper_result_tables_current.md` |
 
 ## 最终交付前检查清单
 
-- [ ] DSW 完整消融矩阵全部回收并写入结果表。
+- [x] DSW 完整消融矩阵全部回收并写入结果表。
 - [ ] 生成 final paper figures。
-- [ ] 将大纲扩写为完整中文/英文论文草稿。
+- [x] 将大纲扩写为完整中文论文母稿：`docs/final_paper_manuscript_zh.md`。
 - [ ] 如需要 `.docx`，按 Documents skill 渲染 PNG 检查。
-- [ ] 用最终 checkpoint 重新生成 demo 页面。
+- [x] 用已训练 checkpoint 生成静态 demo 页面。
 - [ ] 配置 GitHub remote 并推送代码。
-

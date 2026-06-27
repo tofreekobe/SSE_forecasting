@@ -204,15 +204,18 @@ ssh aliyun-dsw-final-sse-via-124 'root=/mnt/workspace/sse_outputs/experiment_mat
 | random | 0.00142173 | 0.0592355 | 97.60% | PASS |
 | blocked | 0.00152041 | 0.0608568 | 97.50% | PASS |
 
-完整消融矩阵包括：
+完整消融矩阵已经完成并同步到本地，共 `14` 个 `metrics.json`。结果表见：
 
-- `segmented_residual`
-- `segmented`
-- `plain`
-- `no_gnss`
-- `gnss_only`
-- `last_slip_only`
-- `no_m0_loss`
+- `docs/dsw_main_training_results_zh.md`
+- `docs/paper_result_tables_current.md`
+- `dsw_results/experiment_matrix_b1f13c4_full/experiment_matrix_summary.md`
+
+关键结论：
+
+- 主模型 `segmented_residual + full input + m0_loss_weight=0.005` 在 random/blocked 上均通过 gate。
+- `gnss_only` 在 random/blocked 上均失败，不能声称仅凭三站 GNSS 可直接预测完整未来 slip field。
+- `last_slip_only` 能通过 gate，但 RMSE 与 M0 error 弱于 full input，不能替代完整 history。
+- `no_m0_loss` 可在 random 上降低像素 RMSE，但 M0 物理一致性明显恶化。
 
 ## 9. 结果汇总
 
@@ -234,6 +237,14 @@ python scripts/collect_experiment_matrix.py \
 
 - `experiment_matrix_summary.csv`
 - `experiment_matrix_summary.md`
+
+论文级 Markdown 表格可由以下命令生成：
+
+```powershell
+.\.venv-cu128\Scripts\python.exe scripts\build_paper_result_tables.py `
+  --summary-csv dsw_results\experiment_matrix_b1f13c4_full\experiment_matrix_summary.csv `
+  --output-md docs\paper_result_tables_current.md
+```
 
 ## 10. Demo 页面
 
@@ -287,7 +298,9 @@ demo_pages\forecast_random_full\index.html
 - `research_notes/current_research_objective.md`
 - `docs/final_paper_rewrite_plan_zh.md`
 - `docs/final_conference_paper_outline_zh.md`
+- `docs/final_paper_manuscript_zh.md`
 - `docs/dsw_main_training_results_zh.md`
+- `docs/paper_result_tables_current.md`
 
 最终论文应强调：
 
@@ -332,4 +345,3 @@ git push -u origin main
 ```
 
 只有确认目标仓库后才能推送，避免误推到旧项目。
-

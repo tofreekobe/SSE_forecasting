@@ -6,7 +6,7 @@ The trained checkpoint is a future-slip forecasting model, not a professional GN
 
 ```powershell
 .\.venv-cu128\Scripts\python.exe scripts\demo_forecast_event.py `
-  --run-dir forecast_training_5070ti_lite\random `
+  --run-dir forecast_training_5070ti_full_streaming\random `
   --package-dir hf_dataset_package `
   --split test `
   --index 0 `
@@ -40,6 +40,13 @@ Expected outputs:
 
 For final paper figures, regenerate with `--training-dir forecast_training_5070ti_full_streaming` after full random/blocked training finishes.
 
+Current final evidence uses the full 6000-event package and DSW matrix results.
+The static demo already exists at:
+
+```text
+demo_pages\forecast_random_full\index.html
+```
+
 ## Static Browser Demo Page
 
 Generate a local HTML report for one trained run:
@@ -58,6 +65,10 @@ Open `demo_pages\forecast_random_full\index.html` in a browser. The page
 summarizes the run metrics, data contract, recent training history, and example
 forecast figures. It is a static reproducible demo, so it does not require a
 server or add a web framework dependency.
+
+The page also includes the ridge-regression inversion proxy figure when present.
+This is useful for demonstrating the expected GNSS-to-slip workflow, but it is
+not a paper-grade inversion model.
 
 ## Inversion Boundary
 
