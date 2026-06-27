@@ -9,6 +9,7 @@
 
 | Run | Split | Model | Input | M0 loss | h50 RMSE | Gain | R2 | M0 rel abs | Gate |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| model_plain_full | blocked | plain | full | 0.005 | 0.005755 | 90.54% | 0.990813 | 0.02816 | PASS |
 | model_plain_full | random | plain | full | 0.005 | 0.004315 | 92.72% | 0.994546 | 0.013652 | PASS |
 | model_segmented_full | blocked | segmented | full | 0.005 | 0.005065 | 91.68% | 0.992884 | 0.032376 | PASS |
 | model_segmented_full | random | segmented | full | 0.005 | 0.004737 | 92.00% | 0.993428 | 0.023861 | PASS |
