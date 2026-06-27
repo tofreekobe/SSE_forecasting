@@ -31,6 +31,7 @@ paper/
 /forecast_training*/
 /small_overfit*/
 /paper_figures*/
+/demo_pages/
 /logs/
 /checkpoints/
 /runs/
