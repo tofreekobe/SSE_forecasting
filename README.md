@@ -89,4 +89,5 @@ See [research_notes/pre_refactor_literature_review.md](research_notes/pre_refact
 - DSW main training results: [docs/dsw_main_training_results_zh.md](docs/dsw_main_training_results_zh.md)
 - Final conference paper outline: [docs/final_conference_paper_outline_zh.md](docs/final_conference_paper_outline_zh.md)
 - Core paper section draft: [docs/final_paper_core_sections_draft_zh.md](docs/final_paper_core_sections_draft_zh.md)
+- Literature matrix: [docs/literature_matrix_zh.md](docs/literature_matrix_zh.md)
 - Complete Chinese usage guide: [docs/complete_usage_guide_zh.md](docs/complete_usage_guide_zh.md)
