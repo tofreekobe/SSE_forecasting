@@ -8,6 +8,7 @@ import csv
 import html
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -112,7 +113,46 @@ def _figure_gallery(figures_dir: Path, output_dir: Path) -> str:
     return "\n".join(parts)
 
 
-def _write_html(output_dir: Path, run_dir: Path, package_dir: Path, metrics: dict, history_rows: list[dict[str, str]], figures_dir: Path) -> None:
+def _optional_gallery_section(
+    title: str,
+    note: str,
+    figure_dir: Path | None,
+    output_dir: Path,
+) -> str:
+    if figure_dir is None or not figure_dir.exists() or not list(figure_dir.glob("*.png")):
+        return ""
+    return (
+        "<section>"
+        f"<h2>{html.escape(title)}</h2>"
+        f"<p class='muted'>{html.escape(note)}</p>"
+        "<div class='gallery'>"
+        f"{_figure_gallery(figure_dir, output_dir)}"
+        "</div>"
+        "</section>"
+    )
+
+
+def _copy_optional_png_gallery(source_dir: Path | None, target_dir: Path) -> Path | None:
+    if source_dir is None or not source_dir.exists():
+        return None
+    pngs = sorted(source_dir.glob("*.png"))
+    if not pngs:
+        return None
+    target_dir.mkdir(parents=True, exist_ok=True)
+    for png in pngs:
+        shutil.copy2(png, target_dir / png.name)
+    return target_dir
+
+
+def _write_html(
+    output_dir: Path,
+    run_dir: Path,
+    package_dir: Path,
+    metrics: dict,
+    history_rows: list[dict[str, str]],
+    figures_dir: Path,
+    inversion_proxy_dir: Path | None,
+) -> None:
     protocol = metrics.get("protocol", run_dir.name)
     model_type = metrics.get("model_type", "n/a")
     input_mode = metrics.get("input_mode", "full")
@@ -128,6 +168,12 @@ def _write_html(output_dir: Path, run_dir: Path, package_dir: Path, metrics: dic
     ]
     data_table = "".join(
         f"<tr><th>{html.escape(k)}</th><td>{html.escape(str(v))}</td></tr>" for k, v in data_rows
+    )
+    inversion_section = _optional_gallery_section(
+        "Inversion Proxy",
+        "This section shows a demonstration GNSS-to-slip proxy, not a professional inversion model.",
+        inversion_proxy_dir,
+        output_dir,
     )
 
     html_text = f"""<!doctype html>
@@ -223,11 +269,12 @@ def _write_html(output_dir: Path, run_dir: Path, package_dir: Path, metrics: dic
       {_history_table(history_rows)}
     </section>
     <section>
-      <h2>Figures</h2>
+      <h2>Forecast Figures</h2>
       <div class="gallery">
         {_figure_gallery(figures_dir, output_dir)}
       </div>
     </section>
+    {inversion_section}
   </main>
 </body>
 </html>
@@ -243,6 +290,11 @@ def main() -> int:
     parser.add_argument("--split", choices=["train", "val", "test"], default="test")
     parser.add_argument("--max-events", type=int, default=3)
     parser.add_argument("--device", choices=["cuda", "cpu"], default="cpu")
+    parser.add_argument(
+        "--inversion-proxy-dir",
+        default=None,
+        help="Optional directory of inversion proxy PNGs. Defaults to <run-dir>/demo_inversion_proxy if it exists.",
+    )
     args = parser.parse_args()
 
     run_dir = Path(args.run_dir)
@@ -256,11 +308,14 @@ def main() -> int:
     metrics = _load_json(metrics_path)
     _ensure_figures(run_dir, Path(args.package_dir), figures_dir, args.split, args.max_events, args.device)
     history_rows = _read_history(run_dir / "training_history.csv")
-    _write_html(output_dir, run_dir, Path(args.package_dir), metrics, history_rows, figures_dir)
+    inversion_proxy_dir = Path(args.inversion_proxy_dir) if args.inversion_proxy_dir else run_dir / "demo_inversion_proxy"
+    if not inversion_proxy_dir.exists():
+        inversion_proxy_dir = None
+    inversion_proxy_dir = _copy_optional_png_gallery(inversion_proxy_dir, output_dir / "inversion_proxy")
+    _write_html(output_dir, run_dir, Path(args.package_dir), metrics, history_rows, figures_dir, inversion_proxy_dir)
     print(json.dumps({"demo_page": str(output_dir / "index.html"), "figures_dir": str(figures_dir)}, indent=2))
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
