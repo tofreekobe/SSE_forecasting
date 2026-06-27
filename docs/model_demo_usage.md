@@ -40,6 +40,25 @@ Expected outputs:
 
 For final paper figures, regenerate with `--training-dir forecast_training_5070ti_full_streaming` after full random/blocked training finishes.
 
+## Static Browser Demo Page
+
+Generate a local HTML report for one trained run:
+
+```powershell
+.\.venv-cu128\Scripts\python.exe scripts\build_forecast_demo_page.py `
+  --run-dir forecast_training_5070ti_full_streaming\random `
+  --package-dir hf_dataset_package `
+  --output-dir demo_pages\forecast_random_full `
+  --split test `
+  --max-events 3 `
+  --device cuda
+```
+
+Open `demo_pages\forecast_random_full\index.html` in a browser. The page
+summarizes the run metrics, data contract, recent training history, and example
+forecast figures. It is a static reproducible demo, so it does not require a
+server or add a web framework dependency.
+
 ## Inversion Boundary
 
 Current usable checkpoint solves:

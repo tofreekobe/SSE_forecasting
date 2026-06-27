@@ -1,0 +1,53 @@
+# DSW 全量主模型训练结果
+
+更新时间：2026-06-28
+
+## 数据口径
+
+- 原始数据：6000 个慢滑移事件，`79,673,958,000` bytes
+  (`74.202 GiB`)。
+- 训练输入：已逐事件审计通过的压缩分片包
+  `/mnt/workspace/hf_dataset_package_verified_b1f13c4`。
+- 审计结论：6000/6000 事件 raw-vs-package 精确比对通过，slip/GNSS 最大差异为 0。
+
+## DSW 环境
+
+- 实例：PAI-DSW `final_sse`
+- GPU：NVIDIA V100-SXM2-16GB
+- 代码包：`/mnt/workspace/sse_codex_b1f13c4`
+- 输出目录：
+  `/mnt/workspace/sse_outputs/experiment_matrix_b1f13c4_full`
+
+## 主模型设置
+
+- 模型：`segmented_residual`
+- 输入：`history_slip + history_gnss`
+- 目标：50-step `future_slip`
+- `forecast_start=60`
+- `forecast_horizon=50`
+- `epochs=50`
+- `batch_size=16`
+- `hidden_channels=64`
+- `m0_loss_weight=0.005`
+- AMP：开启
+
+## 结果表
+
+| Split | Test h50 RMSE | Persistence h50 RMSE | RMSE improvement | Test R2 | Model M0 rel abs | Persistence M0 rel abs | M0 change | Gate |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| random | 0.00142173 | 0.0592355 | 97.60% | 0.999408 | 0.0155652 | 0.948833 | -98.36% | PASS |
+| blocked | 0.00152041 | 0.0608568 | 97.50% | 0.999359 | 0.0166794 | 0.948833 | -98.24% | PASS |
+
+## 结论
+
+主模型在 DSW 上通过 random 与 blocked 两个全量 split 的 h50 publication gate。
+这确认了此前 `GO_WITH_CHANGES` 的判断：原始方案不能原样继续，但修正后的
+data contract、`log1p` slip target、全局 GNSS 归一化、两子断层
+`segmented_residual` 结构是可行的。
+
+完整消融矩阵仍在后台继续运行，后续应补充：
+
+- `segmented` vs `segmented_residual` vs `plain`
+- `full` vs `no_gnss` vs `gnss_only` vs `last_slip_only`
+- `m0_loss_weight=0.005` vs `0`
+
