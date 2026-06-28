@@ -19,6 +19,7 @@ from docx.shared import Inches, Pt, RGBColor
 CONTENT_WIDTH_DXA = 9360
 INLINE_TOKEN_RE = re.compile(r"(`[^`]+`|\*\*.*?\*\*|\[[^\]]+\]\([^)]+\))")
 LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+IMAGE_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
 
 
 def set_run_font(run, size_pt: float | None = None, bold: bool | None = None) -> None:
@@ -212,6 +213,30 @@ def add_table(doc: Document, rows: list[list[str]]) -> None:
     doc.add_paragraph()
 
 
+def add_figure(doc: Document, input_md: Path, alt_text: str, image_ref: str) -> None:
+    image_path = Path(image_ref)
+    if not image_path.is_absolute():
+        candidates = [input_md.parent / image_path, Path.cwd() / image_path]
+        image_path = next((candidate for candidate in candidates if candidate.exists()), candidates[0])
+    if not image_path.exists():
+        para = doc.add_paragraph()
+        run = para.add_run(f"[Missing figure: {image_ref}]")
+        set_run_font(run, 9)
+        run.italic = True
+        return
+
+    para = doc.add_paragraph()
+    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    para.add_run().add_picture(str(image_path), width=Inches(6.05))
+    if alt_text:
+        caption = doc.add_paragraph()
+        caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        caption.paragraph_format.space_after = Pt(8)
+        run = caption.add_run(alt_text)
+        set_run_font(run, 9)
+        run.italic = True
+
+
 def build_docx(input_md: Path, output_docx: Path) -> None:
     doc = Document()
     style_document(doc)
@@ -249,6 +274,11 @@ def build_docx(input_md: Path, output_docx: Path) -> None:
                 table_lines.append(lines[i])
                 i += 1
             add_table(doc, parse_table(table_lines))
+            continue
+        image_match = IMAGE_RE.fullmatch(stripped)
+        if image_match:
+            add_figure(doc, input_md, image_match.group(1), image_match.group(2))
+            i += 1
             continue
         if stripped.startswith("# "):
             text = stripped[2:].strip()
