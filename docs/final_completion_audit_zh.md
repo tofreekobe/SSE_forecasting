@@ -15,7 +15,9 @@
 - 演示 GUI 可一键生成并展示预测结果、训练曲线和明确标注为 proxy 的反演展示。
 - 代码、文档和 GitHub 发布门控已整理，私有/大体量数据不会进入 GitHub。
 
-仍需用户提供或新建目标 GitHub 仓库后才能执行实际 push。当前本地仓库没有 `origin` remote。
+GitHub 上传已完成，当前 `origin` 指向 `https://github.com/tofreekobe/SSE_forecasting.git`，本地 `main` 已跟踪 `origin/main`。
+
+GitHub remote 已配置并完成首次 push。
 
 ## 逐项要求审计
 
@@ -35,7 +37,7 @@
 | 整理项目代码 | 已完成 | 受管目录包括 `src/`、`scripts/`、`tests/`、`configs/`、`docs/`、`research_notes/`；`scripts/check_release_ready.py` 作为发布门控 |
 | 撰写完整中文使用文档 | 已完成 | `docs/complete_usage_guide_zh.md`、`docs/pai_training.md`、`docs/local_cuda_5070ti.md`、`docs/model_demo_usage.md` |
 | GitHub 版本管理准备 | 已完成 | `docs/github_publish_guide_zh.md`、`scripts/check_release_ready.py`；release check `ok: true` |
-| 实际 GitHub push | 待用户提供目标 repo | 本地 `git remote -v` 为空；`gh` CLI 不存在；不能安全推送到无关仓库 |
+| 实际 GitHub push | 已完成 | `origin` 指向 `https://github.com/tofreekobe/SSE_forecasting.git`，`main` 已 push 到 `origin/main`；GitHub 连接器可读取远端 `README.md` |
 
 ## 当前关键实验结论
 
@@ -67,7 +69,7 @@
 - `tracked_file_count: 80`
 - `git_status_count: 0`
 - 私有/大体量路径 `data/`、`hf_dataset_package/`、`paper/`、`demo_pages/`、`dsw_results/` 均被 `.gitignore` 排除
-- warning：未配置 GitHub remote
+- 当前无 release-ready warning；`origin` 已配置并可访问
 
 ```powershell
 .\.venv-cu128\Scripts\python.exe -m pytest tests\test_hf_diagnostics.py tests\test_forecast_contract.py --basetemp .pytest_tmp_verify_release
@@ -97,20 +99,20 @@ ssh -o BatchMode=yes -o ConnectTimeout=12 aliyun-dsw-final-sse-via-124 "hostname
 - GPU: `NVIDIA A10, 23028 MiB, 22717 MiB`
 - remote metrics count: `14`
 
-## 后续只剩的外部动作
+## GitHub 发布记录
 
-若需要完成此前“上传 GitHub”请求，请先新建或指定专用仓库，例如：
+本项目已发布到专用仓库：
 
 ```text
-tofreekobe/sse-slow-slip-forecasting
+tofreekobe/SSE_forecasting
 ```
 
-然后在本地执行：
+已使用发布脚本完成：
 
 ```powershell
-git remote add origin https://github.com/tofreekobe/sse-slow-slip-forecasting.git
+git remote add origin https://github.com/tofreekobe/SSE_forecasting.git
 .\.venv-cu128\Scripts\python.exe scripts\check_release_ready.py
 git push -u origin main
 ```
 
-在提供目标 repo 之前，不应把该项目推送到已有无关仓库。
+后续如有新提交，可继续运行 `scripts\publish_to_github.ps1` 推送到同一仓库。

@@ -353,7 +353,7 @@ demo_pages\forecast_random_full\index.html
 - `demo_pages/`
 - `dsw_results/`
 
-当前还需要配置目标 GitHub remote，例如：
+如需重新配置或迁移目标 GitHub remote，可参考：
 
 发布前先运行：
 
@@ -367,14 +367,14 @@ demo_pages\forecast_random_full\index.html
 
 ```powershell
 .\scripts\publish_to_github.ps1 `
-  -RepositoryUrl https://github.com/tofreekobe/sse-slow-slip-forecasting.git `
+  -RepositoryUrl https://github.com/tofreekobe/SSE_forecasting.git `
   -DryRun
 ```
 
 确认目标仓库后去掉 `-DryRun` 即可正式推送。
 
 ```powershell
-git remote add origin https://github.com/tofreekobe/sse-slow-slip-forecasting.git
+git remote add origin https://github.com/tofreekobe/SSE_forecasting.git
 git push -u origin main
 ```
 

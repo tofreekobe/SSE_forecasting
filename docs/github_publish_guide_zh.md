@@ -10,7 +10,7 @@
   - `bc5be15 Add final SSE paper manuscript`
   - `8fa4f53 Record complete DSW ablation matrix`
   - `fba4a3c Document full dataset recheck`
-- 当前本地仓库尚未配置 GitHub remote。
+- 当前本地仓库已配置 GitHub remote：`https://github.com/tofreekobe/SSE_forecasting.git`。
 - Codex GitHub 连接器可以访问账号仓库列表，但当前未发现专用 SSE 仓库；不要推送到旧的无关仓库。
 
 ## 发布前检查
@@ -40,7 +40,7 @@
 1. 在 GitHub 上新建一个专用仓库，建议名称：
 
 ```text
-tofreekobe/sse-slow-slip-forecasting
+tofreekobe/SSE_forecasting
 ```
 
 建议先设为 private，因为文档中包含研究方向、实验设计和数据说明；后续投稿或开源前再决定是否公开。
@@ -49,7 +49,7 @@ tofreekobe/sse-slow-slip-forecasting
 
 ```powershell
 .\scripts\publish_to_github.ps1 `
-  -RepositoryUrl https://github.com/tofreekobe/sse-slow-slip-forecasting.git `
+  -RepositoryUrl https://github.com/tofreekobe/SSE_forecasting.git `
   -DryRun
 ```
 
@@ -57,7 +57,7 @@ tofreekobe/sse-slow-slip-forecasting
 
 ```powershell
 .\scripts\publish_to_github.ps1 `
-  -RepositoryUrl https://github.com/tofreekobe/sse-slow-slip-forecasting.git `
+  -RepositoryUrl https://github.com/tofreekobe/SSE_forecasting.git `
   -DryRun `
   -SkipRemoteProbe
 ```
@@ -66,7 +66,7 @@ tofreekobe/sse-slow-slip-forecasting
 
 ```powershell
 .\scripts\publish_to_github.ps1 `
-  -RepositoryUrl https://github.com/tofreekobe/sse-slow-slip-forecasting.git
+  -RepositoryUrl https://github.com/tofreekobe/SSE_forecasting.git
 ```
 
 脚本会自动运行 `scripts\check_release_ready.py`，必要时添加 `origin`，然后执行 `git push -u origin main`。
@@ -74,7 +74,7 @@ tofreekobe/sse-slow-slip-forecasting
 也可以手动配置 remote：
 
 ```powershell
-git remote add origin https://github.com/tofreekobe/sse-slow-slip-forecasting.git
+git remote add origin https://github.com/tofreekobe/SSE_forecasting.git
 git remote -v
 ```
 
