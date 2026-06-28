@@ -95,3 +95,4 @@ See [research_notes/pre_refactor_literature_review.md](research_notes/pre_refact
 - Complete Chinese usage guide: [docs/complete_usage_guide_zh.md](docs/complete_usage_guide_zh.md)
 - Forecast/inversion demo GUI usage: [docs/model_demo_usage.md](docs/model_demo_usage.md)
 - GitHub publish guide: [docs/github_publish_guide_zh.md](docs/github_publish_guide_zh.md)
+- Final completion audit: [docs/final_completion_audit_zh.md](docs/final_completion_audit_zh.md)

@@ -41,6 +41,8 @@ REQUIRED_FILES = [
     "docs/paper_result_tables_current.md",
     "docs/complete_usage_guide_zh.md",
     "docs/model_demo_usage.md",
+    "docs/github_publish_guide_zh.md",
+    "docs/final_completion_audit_zh.md",
     "docs/full_dataset_package_audit.md",
 ]
 FORBIDDEN_TRACKED_PREFIXES = [
@@ -61,6 +63,8 @@ EVIDENCE_CHECKS = {
     "docs/paper_result_tables_current.md": ["segmented_residual", "ablate_gnss_only", "PASS", "FAIL"],
     "docs/model_demo_usage.md": ["serve_demo_gui.py", "inversion proxy", "not a paper-grade inversion model"],
     "docs/complete_usage_guide_zh.md": ["serve_demo_gui.py", "GitHub"],
+    "docs/github_publish_guide_zh.md": ["check_release_ready.py", "git push"],
+    "docs/final_completion_audit_zh.md": ["6000", "74.202", "14", "GitHub remote"],
 }
 
 
