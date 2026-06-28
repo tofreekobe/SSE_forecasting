@@ -35,6 +35,7 @@ REQUIRED_FILES = [
     "scripts/train_forecast_model.py",
     "scripts/run_dsw_experiment_matrix.sh",
     "scripts/serve_demo_gui.py",
+    "scripts/publish_to_github.ps1",
     "docs/final_paper_manuscript_zh.md",
     "docs/final_paper_manuscript_zh.docx",
     "docs/final_conference_paper_outline_zh.md",
@@ -63,7 +64,7 @@ EVIDENCE_CHECKS = {
     "docs/paper_result_tables_current.md": ["segmented_residual", "ablate_gnss_only", "PASS", "FAIL"],
     "docs/model_demo_usage.md": ["serve_demo_gui.py", "inversion proxy", "not a paper-grade inversion model"],
     "docs/complete_usage_guide_zh.md": ["serve_demo_gui.py", "GitHub"],
-    "docs/github_publish_guide_zh.md": ["check_release_ready.py", "git push"],
+    "docs/github_publish_guide_zh.md": ["check_release_ready.py", "publish_to_github.ps1", "git push"],
     "docs/final_completion_audit_zh.md": ["6000", "74.202", "14", "GitHub remote"],
 }
 

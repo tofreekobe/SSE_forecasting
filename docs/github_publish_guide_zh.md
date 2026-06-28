@@ -45,20 +45,46 @@ tofreekobe/sse-slow-slip-forecasting
 
 建议先设为 private，因为文档中包含研究方向、实验设计和数据说明；后续投稿或开源前再决定是否公开。
 
-2. 回到本地项目目录，配置 remote：
+2. 回到本地项目目录，先做 dry-run：
+
+```powershell
+.\scripts\publish_to_github.ps1 `
+  -RepositoryUrl https://github.com/tofreekobe/sse-slow-slip-forecasting.git `
+  -DryRun
+```
+
+如果目标仓库是刚创建的空仓库，且 dry-run 的远端探测因空仓库或凭据问题失败，可以先确认仓库 URL 正确，再加 `-SkipRemoteProbe` 只检查本地发布状态：
+
+```powershell
+.\scripts\publish_to_github.ps1 `
+  -RepositoryUrl https://github.com/tofreekobe/sse-slow-slip-forecasting.git `
+  -DryRun `
+  -SkipRemoteProbe
+```
+
+3. 确认无误后正式发布：
+
+```powershell
+.\scripts\publish_to_github.ps1 `
+  -RepositoryUrl https://github.com/tofreekobe/sse-slow-slip-forecasting.git
+```
+
+脚本会自动运行 `scripts\check_release_ready.py`，必要时添加 `origin`，然后执行 `git push -u origin main`。
+
+也可以手动配置 remote：
 
 ```powershell
 git remote add origin https://github.com/tofreekobe/sse-slow-slip-forecasting.git
 git remote -v
 ```
 
-3. 运行发布检查：
+4. 运行发布检查：
 
 ```powershell
 .\.venv-cu128\Scripts\python.exe scripts\check_release_ready.py
 ```
 
-4. 推送：
+5. 推送：
 
 ```powershell
 git push -u origin main
