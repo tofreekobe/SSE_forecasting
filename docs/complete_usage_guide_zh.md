@@ -355,6 +355,14 @@ demo_pages\forecast_random_full\index.html
 
 当前还需要配置目标 GitHub remote，例如：
 
+发布前先运行：
+
+```powershell
+.\.venv-cu128\Scripts\python.exe scripts\check_release_ready.py
+```
+
+详细说明见 `docs/github_publish_guide_zh.md`。
+
 ```powershell
 git remote add origin https://github.com/tofreekobe/sse-slow-slip-forecasting.git
 git push -u origin main
